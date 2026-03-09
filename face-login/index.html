@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Face Login Supabase</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+    <script src="https://unpkg.com/ml5@0.6.0/dist/ml5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: #121212; color: white; font-family: sans-serif; text-align: center; }
+        #canvas-wrapper { margin: 20px auto; border: 3px solid #3ecf8e; width: 640px; height: 480px; }
+        .controls { background: #1e1e1e; padding: 20px; display: inline-block; border-radius: 10px; }
+        input, button { padding: 10px; margin: 5px; border-radius: 5px; border: none; font-weight: bold; }
+        button { cursor: pointer; }
+        #sessionBox { margin-top: 12px; font-size: 15px; }
+    </style>
+</head>
+<body>
+
+    <h1>Reconhecimento Facial</h1>
+    <p id="status">A carregar IA...</p>
+
+    <div class="controls">
+        <input type="text" id="nameInput" placeholder="Nome de utilizador">
+        <button style="background: #3ecf8e" onclick="createAccount()">CRIAR CONTA</button>
+        <button style="background: #7048e8; color: white" onclick="loginWithFace()">ENTRAR COM ROSTO</button>
+        <button style="background: #444; color: white" onclick="logout()">SAIR</button>
+        <div id="sessionBox">Sem sessao ativa.</div>
+    </div>
+
+    <div id="canvas-wrapper"></div>
+
+    <script>
+        const SB_URL = 'https://ocacphcysttwekdhjpwn.supabase.co';
+        const SB_KEY = 'sb_publishable_yMtsceFTxXu5CMaUDd6T4g_W6x_PqDd';
+        const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
+        const SESSION_KEY = 'face_logged_user';
+        const REGISTER_SAMPLES = 6;
+        const REGISTER_SAMPLE_DELAY_MS = 180;
+        const LOGIN_SAMPLES = 6;
+        const LOGIN_SAMPLE_DELAY_MS = 140;
+        const LOGIN_MAX_DISTANCE = 0.42;
+        const LOGIN_MIN_GAP = 0.06;
+        const LOGIN_CONFIRM_DELAY_MS = 700;
+        const REQUIRED_MOVEMENT_PX = 18;
+        const MOVEMENT_WINDOW_MS = 2200;
+        let faceapi, video, detections = [];
+        let currentUser = null;
+
+        function setup() {
+            const canvas = createCanvas(640, 480);
+            canvas.parent('canvas-wrapper');
+            video = createCapture(VIDEO);
+            video.size(640, 480);
+            video.hide();
+
+            loadSession();
+            renderSession();
+
+            const options = { withLandmarks: true, withDescriptors: true, minConfidence: 0.5 };
+            faceapi = ml5.faceApi(video, options, () => {
+                document.getElementById('status').innerText = 'IA pronta';
+                startDetections();
+            });
+        }
+
+        function startDetections() {
+            faceapi.detect((err, res) => {
+                if (err) {
+                    console.error(err);
+                    setTimeout(startDetections, 120);
+                    return;
+                }
+                detections = res || [];
+                startDetections();
+            });
+        }
+
+        function draw() {
+            push();
+            translate(width, 0);
+            scale(-1, 1);
+            image(video, 0, 0);
+            pop();
+            if (detections.length > 0) {
+                const b = detections[0].alignedRect._box;
+                noFill();
+                stroke(62, 207, 142);
+                strokeWeight(3);
+                const mirroredX = width - b._x - b._width;
+                rect(mirroredX, b._y, b._width, b._height);
+            }
+        }
+
+        async function waitForFace(maxWaitMs = 4000) {
+            const start = Date.now();
+            while (Date.now() - start < maxWaitMs) {
+                if (detections.length > 0 && detections[0].descriptor) {
+                    return Array.from(detections[0].descriptor);
+                }
+                await sleep(100);
+            }
+            return null;
+        }
+
+        async function waitForFaceMovement(requiredPx = REQUIRED_MOVEMENT_PX, maxWaitMs = MOVEMENT_WINDOW_MS) {
+            const start = Date.now();
+            let minX = Number.POSITIVE_INFINITY;
+            let maxX = Number.NEGATIVE_INFINITY;
+            let minY = Number.POSITIVE_INFINITY;
+            let maxY = Number.NEGATIVE_INFINITY;
+
+            while (Date.now() - start < maxWaitMs) {
+                if (detections.length > 0) {
+                    const b = detections[0].alignedRect && detections[0].alignedRect._box;
+                    if (b) {
+                        const cx = b._x + (b._width / 2);
+                        const cy = b._y + (b._height / 2);
+                        minX = Math.min(minX, cx);
+                        maxX = Math.max(maxX, cx);
+                        minY = Math.min(minY, cy);
+                        maxY = Math.max(maxY, cy);
+                        const movement = Math.max(maxX - minX, maxY - minY);
+                        if (movement >= requiredPx) return true;
+                    }
+                }
+                await sleep(100);
+            }
+            return false;
+        }
+
+        function sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        function averageDescriptors(samples) {
+            const size = samples[0].length;
+            const acc = new Array(size).fill(0);
+            for (const sample of samples) {
+                for (let i = 0; i < size; i++) acc[i] += sample[i];
+            }
+            return acc.map((v) => v / samples.length);
+        }
+
+        async function captureAverageDescriptor(sampleCount, delayMs) {
+            const samples = [];
+            for (let i = 0; i < sampleCount; i++) {
+                const desc = await waitForFace(4000);
+                if (!desc) {
+                    alert('Nenhum rosto visivel. Mantem a cara centrada e tenta novamente.');
+                    return null;
+                }
+                samples.push(desc);
+                if (i < sampleCount - 1) await sleep(delayMs);
+            }
+            return averageDescriptors(samples);
+        }
+
+        function parseEmbedding(value) {
+            if (Array.isArray(value)) return value.map(Number);
+            if (typeof value === 'string') {
+                try {
+                    const parsed = JSON.parse(value);
+                    if (Array.isArray(parsed)) return parsed.map(Number);
+                } catch (_) {
+                    const cleaned = value.replace('[', '').replace(']', '').trim();
+                    if (!cleaned) return [];
+                    return cleaned.split(',').map((n) => Number(n.trim()));
+                }
+            }
+            return [];
+        }
+
+        function euclideanDistance(a, b) {
+            if (!a || !b || a.length !== b.length || a.length === 0) return Number.POSITIVE_INFINITY;
+            let sum = 0;
+            for (let i = 0; i < a.length; i++) {
+                const d = a[i] - b[i];
+                sum += d * d;
+            }
+            return Math.sqrt(sum);
+        }
+
+        async function getProfiles() {
+            let data;
+            let error;
+            ({ data, error } = await supabaseClient
+                .from('face_profiles')
+                .select('id, name, face_embedding, embeddings'));
+            if (error) {
+                ({ data, error } = await supabaseClient
+                    .from('face_profiles')
+                    .select('id, name, face_embedding'));
+            }
+            if (error) throw error;
+            const result = [];
+            for (const p of (data || [])) {
+                const list = [];
+                const multi = Array.isArray(p.embeddings) ? p.embeddings : [];
+                for (const item of multi) {
+                    const emb = parseEmbedding(item);
+                    if (emb.length > 0) list.push(emb);
+                }
+                const single = parseEmbedding(p.face_embedding);
+                if (single.length > 0) list.push(single);
+                if (list.length > 0) {
+                    result.push({
+                        id: p.id,
+                        name: p.name,
+                        embeddings: list
+                    });
+                }
+            }
+            return result;
+        }
+
+        function findTopMatches(profiles, descriptor) {
+            return profiles
+                .map((p) => {
+                    let best = Number.POSITIVE_INFINITY;
+                    for (const emb of p.embeddings) {
+                        const d = euclideanDistance(descriptor, emb);
+                        if (d < best) best = d;
+                    }
+                    return { ...p, distance: best };
+                })
+                .sort((a, b) => a.distance - b.distance);
+        }
+
+        async function loginByEdgeFunction(descriptor) {
+            const { data, error } = await supabaseClient.functions.invoke('face-login', {
+                body: {
+                    descriptor,
+                    maxDistance: LOGIN_MAX_DISTANCE,
+                    minGap: LOGIN_MIN_GAP
+                }
+            });
+
+            if (error) return { ok: false, available: false, error: error.message };
+            if (!data || !data.user) return { ok: false, available: true, reason: 'Sem match da funcao edge.' };
+
+            const user = data.user;
+            if (!user.name) return { ok: false, available: true, reason: 'Resposta invalida da funcao edge.' };
+            return {
+                ok: true,
+                available: true,
+                top: {
+                    id: user.id || null,
+                    name: user.name,
+                    distance: Number(data.distance ?? 0)
+                }
+            };
+        }
+
+        function validateTopMatch(matches, maxDistance, minGap) {
+            if (!matches || matches.length === 0) return { ok: false, reason: 'Sem perfis para comparar.' };
+            const top = matches[0];
+            if (!Number.isFinite(top.distance)) return { ok: false, reason: 'Embedding invalido na base de dados.' };
+            if (top.distance > maxDistance) {
+                return { ok: false, reason: `Distancia alta (${top.distance.toFixed(3)}).` };
+            }
+            if (matches.length > 1) {
+                const gap = matches[1].distance - top.distance;
+                if (gap < minGap) return { ok: false, reason: 'Rosto ambiguo (muito proximo de outro perfil).' };
+            }
+            return { ok: true, top };
+        }
+
+        function getDistanceDebug(matches) {
+            if (!matches || matches.length === 0) return 'sem resultados';
+            return matches
+                .slice(0, 3)
+                .map((m, i) => `${i + 1}:${m.name || 'sem_nome'}=d${m.distance.toFixed(3)}`)
+                .join(' | ');
+        }
+
+        function loadSession() {
+            const saved = localStorage.getItem(SESSION_KEY);
+            currentUser = saved ? JSON.parse(saved) : null;
+        }
+
+        function saveSession(user) {
+            currentUser = user;
+            localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+            renderSession();
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem(SESSION_KEY);
+            renderSession();
+            alert('Sessao terminada.');
+        }
+
+        function renderSession() {
+            const box = document.getElementById('sessionBox');
+            box.innerText = currentUser
+                ? `Sessao ativa: ${currentUser.name}`
+                : 'Sem sessao ativa.';
+        }
+
+        async function createAccount() {
+            const name = document.getElementById('nameInput').value.trim();
+            if (!name) return alert('Escreve o nome de utilizador.');
+
+            document.getElementById('status').innerText = 'A capturar amostras para criar conta...';
+            const desc = await captureAverageDescriptor(REGISTER_SAMPLES, REGISTER_SAMPLE_DELAY_MS);
+            document.getElementById('status').innerText = 'IA pronta';
+            if (!desc) return;
+            const descriptors = [];
+            for (let i = 0; i < REGISTER_SAMPLES; i++) {
+                const one = await waitForFace(2500);
+                if (!one) break;
+                descriptors.push(one);
+                await sleep(80);
+            }
+            if (descriptors.length === 0) descriptors.push(desc);
+
+            const { data: existing, error: existingError } = await supabaseClient
+                .from('face_profiles')
+                .select('id')
+                .eq('name', name)
+                .limit(1);
+
+            if (existingError) return alert('Erro ao validar nome: ' + existingError.message);
+            if (existing && existing.length > 0) return alert('Esse nome ja existe. Usa outro.');
+
+            let created;
+            let error;
+            ({ data: created, error } = await supabaseClient
+                .from('face_profiles')
+                .insert([{ name, face_embedding: desc, embeddings: descriptors }])
+                .select('id, name')
+                .single());
+            if (error) {
+                ({ data: created, error } = await supabaseClient
+                    .from('face_profiles')
+                    .insert([{ name, face_embedding: desc }])
+                    .select('id, name')
+                    .single());
+            }
+            if (error) return alert('Erro ao criar conta: ' + error.message);
+
+            saveSession(created);
+            alert('Conta criada e sessao iniciada para: ' + name);
+        }
+
+        async function loginWithFace() {
+            document.getElementById('status').innerText = 'Anti-spoof: move ligeiramente a cabeca...';
+            const moved = await waitForFaceMovement();
+            if (!moved) {
+                document.getElementById('status').innerText = 'IA pronta';
+                return alert('Login recusado: sem movimento suficiente. Move ligeiramente a cabeca e tenta novamente.');
+            }
+
+            document.getElementById('status').innerText = 'A capturar login (1/2)...';
+            const desc = await captureAverageDescriptor(LOGIN_SAMPLES, LOGIN_SAMPLE_DELAY_MS);
+            if (!desc) return;
+
+            let profiles;
+            try {
+                profiles = await getProfiles();
+            } catch (err) {
+                return alert('Erro ao ler perfis: ' + err.message);
+            }
+            let firstCheck;
+            const edgeTry = await loginByEdgeFunction(desc);
+            if (edgeTry.ok) {
+                firstCheck = edgeTry;
+            } else {
+                const firstMatches = findTopMatches(profiles, desc);
+                firstCheck = validateTopMatch(firstMatches, LOGIN_MAX_DISTANCE, LOGIN_MIN_GAP);
+                if (!firstCheck.ok) return alert('Login recusado: ' + firstCheck.reason + '\nScores: ' + getDistanceDebug(firstMatches));
+            }
+
+            document.getElementById('status').innerText = 'A confirmar identidade...';
+            await sleep(LOGIN_CONFIRM_DELAY_MS);
+
+            document.getElementById('status').innerText = 'A capturar login (2/2)...';
+            const desc2 = await captureAverageDescriptor(LOGIN_SAMPLES, LOGIN_SAMPLE_DELAY_MS);
+            if (!desc2) return;
+
+            const secondMatches = findTopMatches(profiles, desc2);
+            const secondCheck = validateTopMatch(secondMatches, LOGIN_MAX_DISTANCE, LOGIN_MIN_GAP);
+            if (!secondCheck.ok) return alert('Login recusado: ' + secondCheck.reason + '\nScores: ' + getDistanceDebug(secondMatches));
+
+            const firstUserKey = firstCheck.top.id ?? firstCheck.top.name;
+            const secondUserKey = secondCheck.top.id ?? secondCheck.top.name;
+            if (firstUserKey !== secondUserKey) {
+                return alert('Login recusado: identidade instavel entre capturas.');
+            }
+
+            const user = { id: firstCheck.top.id || null, name: firstCheck.top.name };
+            saveSession(user);
+            document.getElementById('status').innerText = 'IA pronta';
+            alert('Login efetuado: ' + firstCheck.top.name + ' (distancia: ' + firstCheck.top.distance.toFixed(3) + ')');
+        }
+    </script>
+</body>
+</html>
