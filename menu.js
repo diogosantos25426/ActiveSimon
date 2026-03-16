@@ -1,9 +1,22 @@
 let bgMenu;
+let imgSkeleton;
 let state = "MENU";
 
+// Pontos de calibração baseados na anatomia do esqueleto.png
+let calibrationPoints = [
+  { x: 0,    y: -300, label: "Cabeça" },
+  { x: -70,  y: -200,  label: "Ombro Esq" },
+  { x: 70,   y: -200,  label: "Ombro Dir" },
+  { x: -110, y: -80,   label: "Cotovelo Esq" },
+  { x: 110,  y: -80,   label: "Cotovelo Dir" },
+  { x: -55, y: 155,  label: "Joelho Esq" },
+  { x: 55,  y: 155,  label: "Joelho Dir" },
+  { x: 0,    y: -40,  label: "Cintura" }
+];
+
 function preloadMenu() {
-  // Certifica-te que a extensão está correta (.jpg ou .png)
   bgMenu = loadImage('assets/bgMenu.jpg');
+  imgSkeleton = loadImage('assets/esqueleto.png');
 }
 
 function drawMenuBackground() {
@@ -12,8 +25,8 @@ function drawMenuBackground() {
   translate(0, 0, -100); 
   imageMode(CENTER);
   if (bgMenu) {
-    let scale = max(width / bgMenu.width, height / bgMenu.height);
-    image(bgMenu, 0, 0, bgMenu.width * scale, bgMenu.height * scale);
+    let s = max(width / bgMenu.width, height / bgMenu.height);
+    image(bgMenu, 0, 0, bgMenu.width * s, bgMenu.height * s);
   }
   pop();
 }
@@ -24,32 +37,63 @@ function drawMenu() {
   fill(255);
   textAlign(CENTER, CENTER);
   textSize(height * 0.07);
-  text("SIMÃO ATIVO", 0, -height * 0.3);
+  text("SIMON DIZ", 0, -height * 0.3);
 
   let btnWidth = min(width * 0.5, 300);
   drawMenuButton("JOGAR", 0, -50, btnWidth);
   drawMenuButton("MANUAL", 0, 30, btnWidth);
-  drawMenuButton("DEFINIÇÕES", 0, 110, btnWidth);
+  drawMenuButton("CALIBRAÇÃO", 0, 110, btnWidth);
   pop();
 }
 
-function drawSettingsScreen() {
-  drawMenuBackground();
+// --- NOVA TELA DE CALIBRAÇÃO (Substitui as definições antigas) ---
+function drawCalibrateScreen() {
+  background(20);
+  
+  // 1. Imagem do Esqueleto
+  push();
+  translate(0, 0, -50);
+  imageMode(CENTER);
+  if (imgSkeleton) {
+    let aspect = imgSkeleton.width / imgSkeleton.height;
+    image(imgSkeleton, 0, 0, height * aspect * 0.7, height * 0.7);
+  }
+  pop();
+
+  // 2. Título
   push();
   fill(255);
   textAlign(CENTER, CENTER);
-  textSize(40);
-  text("DEFINIÇÕES", 0, -height * 0.3);
-  textSize(20);
-  text("SOM: " + nfc(gameVolume * 100, 0) + "%", 0, -20);
-  drawMenuButton("-", -80, -20, 50);
-  drawMenuButton("+", 80, -20, 50);
-  let diffLabel = gameDifficulty === 1 ? "FÁCIL" : gameDifficulty === 2 ? "MÉDIO" : "DIFÍCIL";
-  text("DIFICULDADE: " + diffLabel, 0, 70);
-  drawMenuButton("-", -120, 70, 50);
-  drawMenuButton("+", 120, 70, 50);
-  drawMenuButton("VOLTAR", 0, 180, 180);
+  textSize(30);
+  text("CALIBRAÇÃO", 0, -height * 0.4);
   pop();
+
+  // 3. Círculos de Calibração
+  let mx = mouseX - width / 2;
+  let my = mouseY - height / 2;
+
+  for (let pt of calibrationPoints) {
+    let d = dist(mx, my, pt.x, pt.y);
+    let isHover = d < 25;
+
+    push();
+    translate(pt.x, pt.y, 10);
+    // Vermelho transparente por defeito, Sólido no hover
+    fill(255, 0, 0, isHover ? 255 : 100); 
+    stroke(255, isHover ? 255 : 0);
+    ellipse(0, 0, 40, 40);
+    
+    if (isHover) {
+      fill(255);
+      noStroke();
+      textSize(14);
+      text(pt.label, 0, 35);
+    }
+    pop();
+  }
+
+  // 4. Botão Voltar
+  drawMenuButton("VOLTAR", 0, height * 0.35, 180);
 }
 
 function drawManualScreen() {
@@ -60,7 +104,7 @@ function drawManualScreen() {
   textSize(35);
   text("COMO JOGAR", 0, -100);
   textSize(20);
-  text("1. Memoriza a sequência de cubos que piscam.\n2. Agarra cada cubo com a mão direita.\n3. Coloca‑o no cesto na ordem certa.", 0, 20);
+  text("1. Memoriza a sequência de cubos.\n2. Toca no cubo certo com a mão direita.\n3. Segue o rasto branco para te guiares.", 0, 20);
   drawMenuButton("VOLTAR", 0, 180, 180);
   pop();
 }
@@ -78,6 +122,7 @@ function drawMenuButton(label, x, y, w) {
   strokeWeight(2);
   fill(isHover ? color(100, 100, 250) : color(40, 100, 250));
   rect(0, 0, w, h, 10);
+  
   translate(0, 0, 2); 
   noStroke();
   fill(255);
@@ -87,7 +132,6 @@ function drawMenuButton(label, x, y, w) {
   pop();
 }
 
-// Renomeado para evitar conflito com o mousePressed principal
 function menuMousePressed() {
   let mx = mouseX - width / 2;
   let my = mouseY - height / 2;
@@ -97,18 +141,12 @@ function menuMousePressed() {
   if (state === "MENU") {
     if (abs(mx) < btnW/2 && abs(my - (-50)) < btnH/2) startNewGame();
     if (abs(mx) < btnW/2 && abs(my - 30) < btnH/2) state = "MANUAL";
-    if (abs(mx) < btnW/2 && abs(my - 110) < btnH/2) state = "SETTINGS";
+    // Agora o botão DEFINIÇÕES (y=110) leva à calibração
+    if (abs(mx) < btnW/2 && abs(my - 110) < btnH/2) state = "CALIBRATE"; 
   } 
-  else if (state === "SETTINGS") {
-    if (abs(my - (-20)) < btnH/2) {
-      if (mx > -105 && mx < -55) gameVolume = max(gameVolume - 0.1, 0);
-      if (mx > 55 && mx < 105) gameVolume = min(gameVolume + 0.1, 1);
-    }
-    if (abs(my - 70) < btnH/2) {
-      if (mx > -145 && mx < -95) gameDifficulty = max(gameDifficulty - 1, 1);
-      if (mx > 95 && mx < 145) gameDifficulty = min(gameDifficulty + 1, 3);
-    }
-    if (abs(mx) < 90 && abs(my - 180) < btnH/2) state = "MENU";
+  else if (state === "CALIBRATE") {
+    // Botão VOLTAR na tela de calibração
+    if (abs(mx) < 90 && abs(my - (height * 0.35)) < btnH/2) state = "MENU";
   }
   else if (state === "MANUAL") {
     if (abs(mx) < 90 && abs(my - 180) < btnH/2) state = "MENU";

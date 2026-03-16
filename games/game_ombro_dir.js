@@ -89,7 +89,7 @@ function gameLoop() {
   drawScore();
 }
 function drawHandTrace(pose) {
-  let h = pose.keypoints[16]; // Pulso Direito
+  let h = pose.keypoints[6]; // Pulso Direito
   if (h && h.confidence > 0.5) {
     // Mapear coordenadas
     let x = map(h.x, 0, 640, width / 2, -width / 2); // Já invertido para o espelho
@@ -247,7 +247,7 @@ function checkCollision(pose) {
   if (!pose.keypoints) return;
   
   // No BlazePose v1, o índice 16 é o pulso direito
-  let h = pose.keypoints[16];
+  let h = pose.keypoints[6];
 
   if (h && h.confidence > 0.5) {
     // MAPEAMENTO CORRIGIDO:
