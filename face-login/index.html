@@ -194,27 +194,36 @@
                     .select('id, name, face_embedding'));
             }
             if (error) throw error;
-            const result = [];
-            for (const p of (data || [])) {
-                const list = [];
-                const multi = Array.isArray(p.embeddings) ? p.embeddings : [];
-                for (const item of multi) {
-                    const emb = parseEmbedding(item);
-                    if (emb.length > 0) list.push(emb);
-                }
-                const single = parseEmbedding(p.face_embedding);
-                if (single.length > 0) list.push(single);
-                if (list.length > 0) {
-                    result.push({
-                        id: p.id,
-                        name: p.name,
-                        embeddings: list
-                    });
-                }
-            }
-            return result;
-        }
 
+            return (data || []).map((p) => {
+                const allEmbeddings = [];
+
+                const primary = parseEmbedding(p.face_embedding);
+                if (primary.length === 128) allEmbeddings.push(primary);
+
+                if (p.embeddings) {
+                    let extra = p.embeddings;
+                    if (typeof extra === 'string') {
+                        try {
+                            extra = JSON.parse(extra);
+                        } catch (_) {}
+                    }
+
+                    if (Array.isArray(extra)) {
+                        for (const item of extra) {
+                            const emb = parseEmbedding(item);
+                            if (emb.length === 128) allEmbeddings.push(emb);
+                        }
+                    }
+                }
+
+                return {
+                    id: p.id,
+                    name: p.name,
+                    embeddings: allEmbeddings
+                };
+            }).filter((p) => p.embeddings.length > 0);
+        }
         function findTopMatches(profiles, descriptor) {
             return profiles
                 .map((p) => {
@@ -399,3 +408,4 @@
     </script>
 </body>
 </html>
+
