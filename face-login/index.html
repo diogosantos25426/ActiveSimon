@@ -7,32 +7,425 @@
     <script src="https://unpkg.com/ml5@0.6.0/dist/ml5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { background: #121212; color: white; font-family: sans-serif; text-align: center; }
-        #canvas-wrapper { margin: 20px auto; border: 3px solid #3ecf8e; width: 640px; height: 480px; }
-        .controls { background: #1e1e1e; padding: 20px; display: inline-block; border-radius: 10px; }
-        input, button { padding: 10px; margin: 5px; border-radius: 5px; border: none; font-weight: bold; }
-        button { cursor: pointer; }
-        #sessionBox { margin-top: 12px; font-size: 15px; }
+        :root {
+            --bg-night: #07111f;
+            --bg-deep: #0d2234;
+            --panel: rgba(10, 20, 34, 0.92);
+            --line: rgba(115, 217, 255, 0.18);
+            --mint: #77f2c5;
+            --cyan: #73d9ff;
+            --gold: #ffd166;
+            --soft: rgba(235, 244, 255, 0.76);
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 16px;
+            box-sizing: border-box;
+            background:
+                radial-gradient(circle at 18% 18%, rgba(115, 217, 255, 0.14), transparent 24%),
+                radial-gradient(circle at 84% 16%, rgba(255, 209, 102, 0.12), transparent 22%),
+                linear-gradient(180deg, var(--bg-deep), var(--bg-night));
+            color: white;
+            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+            text-align: center;
+        }
+
+        .page-shell {
+            width: min(1140px, 100%);
+            margin: 0 auto;
+        }
+
+        .hero {
+            margin-bottom: 12px;
+        }
+
+        .hero-tag {
+            display: inline-block;
+            margin-bottom: 8px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(115, 217, 255, 0.08);
+            border: 1px solid rgba(115, 217, 255, 0.16);
+            color: var(--cyan);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 0 0 6px;
+            font-size: clamp(28px, 4.6vw, 46px);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #f8fbff;
+            text-shadow: 0 0 22px rgba(115, 217, 255, 0.16);
+        }
+
+        .hero-copy {
+            width: min(760px, 100%);
+            margin: 0 auto;
+            color: var(--soft);
+            line-height: 1.45;
+            font-size: 14px;
+        }
+
+        #status {
+            width: fit-content;
+            margin: 10px auto 0;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--line);
+            color: #f4fbff;
+            font-weight: 700;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(300px, 390px) minmax(300px, 1fr);
+            gap: 16px;
+            align-items: stretch;
+            margin-top: 14px;
+        }
+
+        .controls {
+            text-align: left;
+            background: var(--panel);
+            padding: 18px;
+            border-radius: 22px;
+            border: 1px solid var(--line);
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+            box-sizing: border-box;
+        }
+
+        .panel-title {
+            margin: 0 0 6px;
+            font-size: 21px;
+            color: #f4fbff;
+        }
+
+        .panel-copy {
+            margin: 0 0 12px;
+            color: var(--soft);
+            line-height: 1.4;
+            font-size: 12px;
+        }
+
+        .flow-list {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            margin: 0 0 12px;
+        }
+
+        .flow-item {
+            display: grid;
+            grid-template-columns: 26px 1fr;
+            gap: 8px;
+            align-items: start;
+            padding: 9px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.035);
+            border: 1px solid rgba(115, 217, 255, 0.08);
+        }
+
+        .flow-item strong {
+            display: block;
+            margin-bottom: 2px;
+            font-size: 12px;
+            color: #f4fbff;
+        }
+
+        .flow-item span {
+            display: block;
+            font-size: 11px;
+            line-height: 1.3;
+            color: var(--soft);
+        }
+
+        .flow-num {
+            display: grid;
+            place-items: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, rgba(119, 242, 197, 0.24), rgba(115, 217, 255, 0.18));
+            color: #fff;
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .field-group {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .field-label {
+            display: grid;
+            gap: 5px;
+            font-size: 12px;
+            font-weight: 700;
+            color: rgba(240, 248, 255, 0.88);
+        }
+
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 11px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(115, 217, 255, 0.14);
+            background: rgba(255, 255, 255, 0.06);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: rgba(119, 242, 197, 0.5);
+            box-shadow: 0 0 0 3px rgba(119, 242, 197, 0.16);
+        }
+
+        .button-grid {
+            display: grid;
+            gap: 8px;
+        }
+
+        button {
+            width: 100%;
+            padding: 11px 12px;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            font-weight: 900;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: transform 160ms ease, box-shadow 160ms ease;
+            font-size: 12px;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, var(--mint), #48c7ff);
+            color: #072116;
+            box-shadow: 0 16px 30px rgba(72, 199, 255, 0.18);
+        }
+
+        .secondary-btn {
+            background: linear-gradient(135deg, #4361ee, #6c63ff);
+            color: white;
+        }
+
+        .accent-btn {
+            background: linear-gradient(135deg, #ffd166, #ff9f1c);
+            color: #261400;
+        }
+
+        .ghost-btn {
+            background: rgba(255, 255, 255, 0.06);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        #sessionBox {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(119, 242, 197, 0.16);
+            font-size: 12px;
+            font-weight: 700;
+            color: #e7f8ff;
+        }
+
+        #helperText {
+            margin-top: 10px;
+            font-size: 11px;
+            line-height: 1.4;
+            color: rgba(235, 244, 255, 0.68);
+        }
+
+        #canvas-wrapper {
+            position: relative;
+            margin: 0 auto;
+            width: 100%;
+            max-width: 672px;
+            border: 1px solid rgba(115, 217, 255, 0.18);
+            background: rgba(3, 10, 18, 0.62);
+            border-radius: 24px;
+            padding: 12px;
+            box-sizing: border-box;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+            overflow: hidden;
+        }
+
+        #canvas-wrapper::before {
+            content: "Camera e leitura facial";
+            position: absolute;
+            top: 16px;
+            left: 18px;
+            z-index: 2;
+            padding: 7px 9px;
+            border-radius: 999px;
+            background: rgba(7, 18, 31, 0.78);
+            border: 1px solid rgba(115, 217, 255, 0.14);
+            color: var(--cyan);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        canvas {
+            display: block;
+            width: 100% !important;
+            height: auto !important;
+            max-width: 640px;
+            border-radius: 18px;
+            overflow: hidden;
+        }
+
+        @media (max-width: 980px) {
+            .layout {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .controls {
+                order: 2;
+                padding: 16px;
+            }
+
+            #canvas-wrapper {
+                order: 1;
+            }
+
+            .flow-list {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+        }
+
+        @media (max-width: 720px) {
+            body {
+                padding: 10px;
+            }
+
+            .hero {
+                margin-bottom: 8px;
+            }
+
+            .hero-copy {
+                font-size: 12px;
+            }
+
+            #status {
+                width: auto;
+                max-width: 100%;
+                font-size: 12px;
+            }
+
+            .controls {
+                padding: 14px 12px;
+                border-radius: 18px;
+            }
+
+            .panel-title {
+                font-size: 18px;
+            }
+
+            #canvas-wrapper {
+                padding: 10px;
+                border-radius: 18px;
+            }
+
+            #canvas-wrapper::before {
+                top: 10px;
+                left: 10px;
+                font-size: 10px;
+                padding: 6px 8px;
+            }
+
+            canvas {
+                border-radius: 12px;
+            }
+        }
     </style>
 </head>
 <body>
+    <div class="page-shell">
+        <div class="hero">
+            <div class="hero-tag">Acesso Facial</div>
+            <h1>Entrada do Jogador</h1>
+            <p class="hero-copy">Cria a conta facial, entra com rosto e associa supervisor apenas quando precisares.</p>
+            <p id="status">A carregar IA...</p>
+        </div>
 
-    <h1>Reconhecimento Facial</h1>
-    <p id="status">A carregar IA...</p>
+        <div class="layout">
+            <div class="controls">
+                <h2 class="panel-title">Registo e login</h2>
+                <p class="panel-copy">Registo, entrada e associacao em passos separados.</p>
 
-    <div class="controls">
-        <input type="text" id="nameInput" placeholder="Nome de utilizador">
-        <button style="background: #3ecf8e" onclick="createAccount()">CRIAR CONTA</button>
-        <button style="background: #7048e8; color: white" onclick="loginWithFace()">ENTRAR COM ROSTO</button>
-        <button style="background: #444; color: white" onclick="logout()">SAIR</button>
-        <div id="sessionBox">Sem sessao ativa.</div>
+                <div class="flow-list">
+                    <div class="flow-item">
+                        <div class="flow-num">1</div>
+                        <div>
+                            <strong>Criar</strong>
+                            <span>Guardar rosto.</span>
+                        </div>
+                    </div>
+                    <div class="flow-item">
+                        <div class="flow-num">2</div>
+                        <div>
+                            <strong>Entrar</strong>
+                            <span>Ler o rosto.</span>
+                        </div>
+                    </div>
+                    <div class="flow-item">
+                        <div class="flow-num">3</div>
+                        <div>
+                            <strong>Associar</strong>
+                            <span>PIN do supervisor.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="nameInput">
+                        Nome do jogador
+                        <input type="text" id="nameInput" placeholder="Ex.: Marta Silva">
+                    </label>
+                    <label class="field-label" for="supervisorPinInput">
+                        PIN do supervisor
+                        <input type="password" id="supervisorPinInput" placeholder="Usado apenas para associacao">
+                    </label>
+                </div>
+
+                <div class="button-grid">
+                    <button class="primary-btn" onclick="createAccount()">Criar conta facial</button>
+                    <button class="secondary-btn" onclick="loginWithFace()">Entrar com rosto</button>
+                    <button class="accent-btn" onclick="linkSupervisor()">Associar supervisor</button>
+                    <button class="ghost-btn" onclick="logout()">Sair</button>
+                </div>
+
+                <div id="sessionBox">Sem sessao ativa.</div>
+                <div id="helperText">O PIN e opcional e so serve para associar supervisor depois da conta existir.</div>
+            </div>
+
+            <div id="canvas-wrapper"></div>
+        </div>
     </div>
-
-    <div id="canvas-wrapper"></div>
 
     <script>
         const SB_URL = 'https://ocacphcysttwekdhjpwn.supabase.co';
         const SB_KEY = 'sb_publishable_yMtsceFTxXu5CMaUDd6T4g_W6x_PqDd';
+        const PROFILE_SETUP_HINT = 'Prepara primeiro a base de dados com o ficheiro supabase/supervisor_auth_schema.sql.';
         const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
         const SESSION_KEY = 'face_logged_user';
@@ -48,6 +441,27 @@
         let faceapi, video, detections = [];
         let currentUser = null;
 
+        function getQueryParam(name) {
+            return new URLSearchParams(window.location.search).get(name);
+        }
+
+        function maybeReturnToApp() {
+            const returnTo = getQueryParam('returnTo');
+            if (returnTo) {
+                window.location.href = returnTo;
+            }
+        }
+
+        function applyModeHint() {
+            const mode = getQueryParam('mode');
+            if (mode === 'register') {
+                document.getElementById('status').innerText = 'Modo registo facial ativo';
+                document.getElementById('nameInput').focus();
+            } else if (mode === 'login') {
+                document.getElementById('status').innerText = 'Modo login facial ativo';
+            }
+        }
+
         function setup() {
             const canvas = createCanvas(640, 480);
             canvas.parent('canvas-wrapper');
@@ -57,10 +471,13 @@
 
             loadSession();
             renderSession();
+            applyModeHint();
 
             const options = { withLandmarks: true, withDescriptors: true, minConfidence: 0.5 };
             faceapi = ml5.faceApi(video, options, () => {
-                document.getElementById('status').innerText = 'IA pronta';
+                if (!getQueryParam('mode')) {
+                    document.getElementById('status').innerText = 'IA pronta';
+                }
                 startDetections();
             });
         }
@@ -187,11 +604,16 @@
             let error;
             ({ data, error } = await supabaseClient
                 .from('face_profiles')
-                .select('id, name, face_embedding, embeddings'));
+                .select('id, name, face_embedding, embeddings, supervisor_id, supervisors(name)'));
             if (error) {
                 ({ data, error } = await supabaseClient
                     .from('face_profiles')
-                    .select('id, name, face_embedding'));
+                    .select('id, name, face_embedding, embeddings, supervisor_id'));
+            }
+            if (error) {
+                ({ data, error } = await supabaseClient
+                    .from('face_profiles')
+                    .select('id, name, face_embedding, embeddings'));
             }
             if (error) throw error;
 
@@ -220,10 +642,13 @@
                 return {
                     id: p.id,
                     name: p.name,
+                    supervisor_id: p.supervisor_id || null,
+                    supervisor_name: p.supervisors && p.supervisors.name ? p.supervisors.name : null,
                     embeddings: allEmbeddings
                 };
             }).filter((p) => p.embeddings.length > 0);
         }
+
         function findTopMatches(profiles, descriptor) {
             return profiles
                 .map((p) => {
@@ -257,6 +682,8 @@
                 top: {
                     id: user.id || null,
                     name: user.name,
+                    supervisor_id: user.supervisor_id || null,
+                    supervisor_name: user.supervisor_name || null,
                     distance: Number(data.distance ?? 0)
                 }
             };
@@ -267,17 +694,18 @@
             const top = matches[0];
             if (!Number.isFinite(top.distance)) return { ok: false, reason: 'Embedding invalido na base de dados.' };
             if (top.distance > maxDistance) {
-                return { ok: false, reason: `Distancia alta (${top.distance.toFixed(3)}).` };
+                return { ok: false, reason: `Distancia demasiado alta (${top.distance.toFixed(3)} > ${maxDistance.toFixed(3)})` };
             }
             if (matches.length > 1) {
                 const gap = matches[1].distance - top.distance;
-                if (gap < minGap) return { ok: false, reason: 'Rosto ambiguo (muito proximo de outro perfil).' };
+                if (gap < minGap) {
+                    return { ok: false, reason: `Match ambiguo (gap ${gap.toFixed(3)} < ${minGap.toFixed(3)})` };
+                }
             }
             return { ok: true, top };
         }
 
         function getDistanceDebug(matches) {
-            if (!matches || matches.length === 0) return 'sem resultados';
             return matches
                 .slice(0, 3)
                 .map((m, i) => `${i + 1}:${m.name || 'sem_nome'}=d${m.distance.toFixed(3)}`)
@@ -307,6 +735,29 @@
             box.innerText = currentUser
                 ? `Sessao ativa: ${currentUser.name}`
                 : 'Sem sessao ativa.';
+        }
+
+        function explainSchemaError(error) {
+            const message = error && error.message ? error.message : '';
+            if (/does not exist|schema cache|Could not find the table|relation .* does not exist/i.test(message)) {
+                return PROFILE_SETUP_HINT;
+            }
+            return message || 'Ocorreu um erro inesperado.';
+        }
+
+        async function validateSupervisorPin(pin) {
+            const { data, error } = await supabaseClient.rpc('validate_supervisor_pin', {
+                pin_input: pin
+            });
+
+            if (error) throw new Error(explainSchemaError(error));
+
+            const supervisor = Array.isArray(data) ? data[0] : data;
+            if (!supervisor || !supervisor.supervisor_id) {
+                throw new Error('PIN de supervisor invalido.');
+            }
+
+            return supervisor;
         }
 
         async function createAccount() {
@@ -339,7 +790,11 @@
             let error;
             ({ data: created, error } = await supabaseClient
                 .from('face_profiles')
-                .insert([{ name, face_embedding: desc, embeddings: descriptors }])
+                .insert([{
+                    name,
+                    face_embedding: desc,
+                    embeddings: descriptors
+                }])
                 .select('id, name')
                 .single());
             if (error) {
@@ -351,8 +806,49 @@
             }
             if (error) return alert('Erro ao criar conta: ' + error.message);
 
-            saveSession(created);
+            saveSession({
+                id: created.id || null,
+                name: created.name,
+                supervisor_id: null,
+                supervisor_name: null
+            });
             alert('Conta criada e sessao iniciada para: ' + name);
+            maybeReturnToApp();
+        }
+
+        async function linkSupervisor() {
+            const supervisorPin = document.getElementById('supervisorPinInput').value.trim();
+            if (!currentUser || !currentUser.id) {
+                return alert('Primeiro cria conta ou inicia sessao com rosto.');
+            }
+            if (!supervisorPin) {
+                return alert('Insere o PIN do supervisor para fazer a associacao.');
+            }
+
+            let supervisor;
+            try {
+                supervisor = await validateSupervisorPin(supervisorPin);
+            } catch (err) {
+                return alert('Erro ao validar PIN: ' + err.message);
+            }
+
+            const { data, error } = await supabaseClient
+                .from('face_profiles')
+                .update({ supervisor_id: supervisor.supervisor_id })
+                .eq('id', currentUser.id)
+                .select('id, name, supervisor_id')
+                .single();
+
+            if (error) return alert('Erro ao associar supervisor: ' + explainSchemaError(error));
+
+            saveSession({
+                id: data.id || currentUser.id,
+                name: data.name || currentUser.name,
+                supervisor_id: supervisor.supervisor_id,
+                supervisor_name: supervisor.supervisor_name || null
+            });
+            alert('Supervisor associado com sucesso.');
+            maybeReturnToApp();
         }
 
         async function loginWithFace() {
@@ -400,10 +896,16 @@
                 return alert('Login recusado: identidade instavel entre capturas.');
             }
 
-            const user = { id: firstCheck.top.id || null, name: firstCheck.top.name };
+            const user = {
+                id: firstCheck.top.id || null,
+                name: firstCheck.top.name,
+                supervisor_id: firstCheck.top.supervisor_id || null,
+                supervisor_name: firstCheck.top.supervisor_name || null
+            };
             saveSession(user);
             document.getElementById('status').innerText = 'IA pronta';
             alert('Login efetuado: ' + firstCheck.top.name + ' (distancia: ' + firstCheck.top.distance.toFixed(3) + ')');
+            maybeReturnToApp();
         }
     </script>
 </body>

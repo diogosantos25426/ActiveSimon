@@ -3,29 +3,427 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simão Ativo - Treino Cognitivo</title>
+    <title>Simao Ativo - Treino Cognitivo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.sound.min.js"></script>
     <script src="https://unpkg.com/ml5@1.2.1/dist/ml5.min.js"></script>
-
     <style>
-        body { margin: 0; background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        :root {
+            --bg-night: #07111f;
+            --bg-deep: #0d2234;
+            --panel: rgba(8, 18, 31, 0.78);
+            --panel-strong: rgba(10, 24, 40, 0.94);
+            --line: rgba(130, 242, 214, 0.24);
+            --mint: #77f2c5;
+            --cyan: #73d9ff;
+            --gold: #ffd166;
+            --danger: #ff8f8f;
+            --text-soft: rgba(233, 244, 255, 0.78);
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            position: relative;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(115, 217, 255, 0.14), transparent 28%),
+                radial-gradient(circle at 82% 18%, rgba(255, 209, 102, 0.12), transparent 24%),
+                radial-gradient(circle at 50% 85%, rgba(119, 242, 197, 0.1), transparent 32%),
+                linear-gradient(180deg, var(--bg-deep), var(--bg-night));
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+            color: #eef7ff;
+        }
+
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        body::before {
+            background:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 56px 56px;
+            mask-image: radial-gradient(circle at center, black 45%, transparent 100%);
+            opacity: 0.32;
+        }
+
+        body::after {
+            background: linear-gradient(180deg, transparent 0%, rgba(3, 8, 14, 0.42) 100%);
+        }
+
+        .auth-shell {
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            box-sizing: border-box;
+            background: rgba(4, 10, 18, 0.56);
+            backdrop-filter: blur(14px);
+            overflow-y: auto;
+        }
+
+        .auth-shell.hidden,
+        .session-pill.hidden {
+            display: none;
+        }
+
+        .auth-card {
+            width: min(560px, 100%);
+            position: relative;
+            overflow: hidden;
+            padding: 24px;
+            border-radius: 28px;
+            background:
+                linear-gradient(145deg, rgba(12, 33, 52, 0.98), rgba(8, 16, 28, 0.96)),
+                var(--panel-strong);
+            border: 1px solid var(--line);
+            box-shadow:
+                0 24px 80px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            color: #fff;
+            box-sizing: border-box;
+        }
+
+        .auth-card::before,
+        .auth-card::after {
+            content: "";
+            position: absolute;
+            border-radius: 999px;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .auth-card::before {
+            top: -48px;
+            right: -28px;
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle, rgba(115, 217, 255, 0.34), transparent 68%);
+        }
+
+        .auth-card::after {
+            bottom: -54px;
+            left: -30px;
+            width: 180px;
+            height: 180px;
+            background: radial-gradient(circle, rgba(119, 242, 197, 0.22), transparent 70%);
+        }
+
+        .auth-card h2 {
+            margin: 0 0 8px;
+            font-size: 28px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            text-shadow: 0 0 18px rgba(115, 217, 255, 0.22);
+        }
+
+        .auth-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            padding: 7px 11px;
+            border-radius: 999px;
+            background: rgba(115, 217, 255, 0.09);
+            border: 1px solid rgba(115, 217, 255, 0.16);
+            color: var(--cyan);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .auth-card p {
+            margin: 0 0 12px;
+            max-width: 48ch;
+            color: var(--text-soft);
+            line-height: 1.45;
+            font-size: 14px;
+        }
+
+        .auth-steps {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            margin: 14px 0;
+        }
+
+        .auth-step {
+            display: grid;
+            grid-template-columns: 28px 1fr;
+            gap: 8px;
+            align-items: start;
+            padding: 10px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.035);
+            border: 1px solid rgba(115, 217, 255, 0.1);
+        }
+
+        .auth-step strong {
+            display: block;
+            color: #f4fbff;
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+
+        .auth-step span {
+            color: rgba(228, 240, 255, 0.72);
+            font-size: 11px;
+            line-height: 1.35;
+        }
+
+        .auth-step-badge {
+            display: grid;
+            place-items: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(119, 242, 197, 0.24), rgba(115, 217, 255, 0.2));
+            color: #fff;
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .auth-message {
+            min-height: 22px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .auth-message.error {
+            color: var(--danger);
+        }
+
+        .auth-message.success {
+            color: var(--mint);
+        }
+
+        .auth-actions {
+            display: grid;
+            gap: 10px;
+        }
+
+        .auth-actions button {
+            position: relative;
+            overflow: hidden;
+            padding: 13px 14px;
+            border: 1px solid transparent;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--mint), #48c7ff);
+            color: #062213;
+            font-size: 13px;
+            font-weight: 800;
+            cursor: pointer;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            box-shadow: 0 14px 28px rgba(72, 199, 255, 0.18);
+            transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+        }
+
+        .auth-actions button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 34px rgba(72, 199, 255, 0.22);
+        }
+
+        .auth-actions button.secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: #eff7ff;
+            border-color: rgba(115, 217, 255, 0.18);
+            box-shadow: none;
+        }
+
+        .auth-help {
+            margin-top: 10px;
+            font-size: 11px;
+            color: rgba(228, 240, 255, 0.58);
+            line-height: 1.4;
+        }
+
+        .session-pill {
+            position: fixed;
+            top: 18px;
+            left: 18px;
+            z-index: 12;
+            padding: 12px 16px;
+            max-width: min(420px, calc(100vw - 36px));
+            border-radius: 18px;
+            background: linear-gradient(135deg, rgba(8, 22, 38, 0.9), rgba(7, 32, 28, 0.84));
+            border: 1px solid rgba(119, 242, 197, 0.28);
+            color: #d7ffe9;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.3;
+            backdrop-filter: blur(14px);
+            overflow: hidden;
+            box-shadow: 0 18px 32px rgba(0, 0, 0, 0.22);
+        }
+
+        .session-pill strong,
+        .session-pill span {
+            display: block;
+        }
+
+        .session-pill strong {
+            color: #f4fbff;
+            font-size: 13px;
+        }
+
+        .session-pill span {
+            color: rgba(215, 255, 233, 0.78);
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                align-items: stretch;
+            }
+
+            .auth-shell {
+                padding: 12px;
+                align-items: center;
+            }
+
+            .auth-card {
+                width: 100%;
+                margin-top: 0;
+                padding: 18px 16px;
+                border-radius: 22px;
+            }
+
+            .auth-card h2 {
+                font-size: 22px;
+            }
+
+            .auth-card p {
+                max-width: none;
+                font-size: 13px;
+            }
+
+            .auth-steps {
+                grid-template-columns: 1fr;
+                gap: 7px;
+                margin: 10px 0;
+            }
+
+            .auth-step {
+                grid-template-columns: 26px 1fr;
+                padding: 8px 9px;
+            }
+
+            .auth-actions {
+                gap: 8px;
+            }
+
+            .auth-actions button {
+                padding: 12px 12px;
+                font-size: 12px;
+            }
+
+            .session-pill {
+                top: 12px;
+                left: 12px;
+                right: 12px;
+                max-width: none;
+                padding: 10px 14px;
+            }
+        }
+
+        @media (max-height: 760px) {
+            .auth-card {
+                padding: 18px 16px;
+            }
+
+            .auth-kicker {
+                margin-bottom: 8px;
+            }
+
+            .auth-card h2 {
+                font-size: 22px;
+            }
+
+            .auth-card p {
+                margin-bottom: 8px;
+                font-size: 13px;
+            }
+
+            .auth-steps {
+                gap: 6px;
+                margin: 10px 0;
+            }
+
+            .auth-step {
+                padding: 8px 9px;
+            }
+
+            .auth-actions button {
+                padding: 11px 12px;
+            }
+        }
     </style>
 </head>
 <body>
+    <div id="session-pill" class="session-pill hidden"></div>
+
+        <div id="auth-shell" class="auth-shell hidden">
+        <div class="auth-card">
+            <div class="auth-kicker">Modo de Acesso</div>
+            <h2>Entrar no Simon Ativo</h2>
+            <p>Usa reconhecimento facial para criar conta, entrar e continuar o treino.</p>
+
+            <div class="auth-steps">
+                <div class="auth-step">
+                    <div class="auth-step-badge">1</div>
+                    <div>
+                        <strong>Criar</strong>
+                        <span>Regista o rosto.</span>
+                    </div>
+                </div>
+                <div class="auth-step">
+                    <div class="auth-step-badge">2</div>
+                    <div>
+                        <strong>Entrar</strong>
+                        <span>Volta com o rosto.</span>
+                    </div>
+                </div>
+                <div class="auth-step">
+                    <div class="auth-step-badge">3</div>
+                    <div>
+                        <strong>Associar</strong>
+                        <span>PIN do supervisor.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="auth-message" class="auth-message"></div>
+
+            <div class="auth-actions">
+                <button id="auth-open-login" type="button">Entrar com rosto</button>
+                <button id="auth-open-register" class="secondary" type="button">Criar conta com rosto</button>
+                <button id="auth-refresh-session" class="secondary" type="button">Ja fiz o login facial</button>
+            </div>
+
+            <div class="auth-help">Sem sessao? Abre o ecra facial e volta automaticamente.</div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
     <script src="menu.js"></script>
     <script src="game.js"></script>
     <script src="sketch.js"></script>
-    <script src="calibrateGame.js"></script>
-    <script src="games/game_cintura.js"></script>
-    <script src="games/game_cabeca.js"></script>
-    <script src="games/game_joelho_dir.js"></script>
-    <script src="games/game_joelho_esq.js"></script>
-    <script src="games/game_mao_dir.js"></script>
-    <script src="games/game_mao_esq.js"></script>
-    <script src="games/game_ombro_dir.js"></script>
-    <script src="games/game_ombro_esq.js"></script>
-
-
 </body>
 </html>
