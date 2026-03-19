@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.sound.min.js"></script>
     <script src="https://unpkg.com/ml5@1.2.1/dist/ml5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-night: #07111f;
@@ -270,6 +271,283 @@
             box-shadow: 0 18px 32px rgba(0, 0, 0, 0.22);
         }
 
+        .supervisor-launch {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            z-index: 24;
+            padding: 11px 16px;
+            border: 1px solid rgba(115, 217, 255, 0.2);
+            border-radius: 999px;
+            background: rgba(7, 23, 41, 0.9);
+            color: #f4fbff;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            cursor: pointer;
+            backdrop-filter: blur(12px);
+        }
+
+        .supervisor-shell {
+            position: fixed;
+            inset: 0;
+            z-index: 26;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(2, 8, 15, 0.7);
+            backdrop-filter: blur(16px);
+        }
+
+        .supervisor-shell.hidden {
+            display: none;
+        }
+
+        .supervisor-card {
+            width: min(1120px, 100%);
+            max-height: min(760px, calc(100vh - 48px));
+            overflow: auto;
+            border-radius: 28px;
+            border: 1px solid rgba(115, 217, 255, 0.16);
+            background: linear-gradient(145deg, rgba(9, 23, 39, 0.98), rgba(7, 16, 28, 0.96));
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+        }
+
+        .supervisor-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 22px 24px 16px;
+            border-bottom: 1px solid rgba(115, 217, 255, 0.1);
+        }
+
+        .supervisor-title {
+            margin: 0;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .supervisor-copy {
+            margin: 6px 0 0;
+            color: var(--text-soft);
+            font-size: 13px;
+        }
+
+        .supervisor-close {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #f4fbff;
+            padding: 10px 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .supervisor-login,
+        .supervisor-workspace {
+            padding: 24px;
+        }
+
+        .supervisor-login.hidden,
+        .supervisor-workspace.hidden {
+            display: none;
+        }
+
+        .supervisor-login-grid {
+            display: grid;
+            grid-template-columns: minmax(280px, 360px) 1fr;
+            gap: 16px;
+        }
+
+        .supervisor-panel,
+        .player-list,
+        .assignment-panel {
+            border: 1px solid rgba(115, 217, 255, 0.1);
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.035);
+        }
+
+        .supervisor-panel {
+            padding: 18px;
+        }
+
+        .supervisor-panel h3,
+        .player-list h3,
+        .assignment-panel h3 {
+            margin: 0 0 8px;
+            font-size: 18px;
+        }
+
+        .supervisor-panel p,
+        .player-list p,
+        .assignment-panel p {
+            margin: 0 0 12px;
+            color: var(--text-soft);
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        .supervisor-login-form {
+            display: grid;
+            gap: 10px;
+        }
+
+        .supervisor-login-form input,
+        .assignment-player select,
+        .assignment-row select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 11px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(115, 217, 255, 0.14);
+            background: rgba(255, 255, 255, 0.06);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .supervisor-login-form button,
+        .assignment-actions button {
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid transparent;
+            background: linear-gradient(135deg, var(--gold), #ff9f1c);
+            color: #261400;
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        .supervisor-status {
+            min-height: 20px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .supervisor-status.error {
+            color: var(--danger);
+        }
+
+        .supervisor-status.success {
+            color: var(--mint);
+        }
+
+        .supervisor-workspace {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 18px;
+        }
+
+        .supervisor-workspace.hidden {
+            display: none;
+        }
+
+        .player-list {
+            padding: 18px;
+        }
+
+        .player-items {
+            display: grid;
+            gap: 10px;
+            max-height: 460px;
+            overflow: auto;
+        }
+
+        .player-item {
+            width: 100%;
+            text-align: left;
+            padding: 12px 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(115, 217, 255, 0.12);
+            background: rgba(7, 23, 41, 0.65);
+            color: #f4fbff;
+            cursor: pointer;
+        }
+
+        .player-item.active {
+            border-color: rgba(119, 242, 197, 0.4);
+            background: rgba(17, 51, 64, 0.78);
+        }
+
+        .player-item strong,
+        .player-item span {
+            display: block;
+        }
+
+        .player-item strong {
+            margin-bottom: 4px;
+        }
+
+        .player-item span {
+            color: var(--text-soft);
+            font-size: 12px;
+        }
+
+        .assignment-panel {
+            padding: 18px;
+        }
+
+        .assignment-player {
+            display: grid;
+            grid-template-columns: 1fr 200px;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .assignment-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .assignment-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 160px 100px;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(115, 217, 255, 0.1);
+            background: rgba(7, 23, 41, 0.6);
+        }
+
+        .assignment-main {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .assignment-main input {
+            margin-top: 4px;
+        }
+
+        .assignment-meta strong,
+        .assignment-meta span {
+            display: block;
+        }
+
+        .assignment-meta span {
+            margin-top: 4px;
+            color: var(--text-soft);
+            font-size: 12px;
+            line-height: 1.35;
+        }
+
+        .assignment-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .assignment-actions .ghost {
+            background: rgba(255, 255, 255, 0.05);
+            color: #f4fbff;
+            border-color: rgba(115, 217, 255, 0.14);
+        }
+
         .session-pill strong,
         .session-pill span {
             display: block;
@@ -341,6 +619,36 @@
                 max-width: none;
                 padding: 10px 14px;
             }
+
+            .supervisor-launch {
+                top: auto;
+                right: 12px;
+                bottom: 12px;
+            }
+
+            .supervisor-shell {
+                padding: 12px;
+            }
+
+            .supervisor-card {
+                max-height: calc(100vh - 24px);
+            }
+
+            .supervisor-header {
+                padding: 18px 16px 14px;
+            }
+
+            .supervisor-login,
+            .supervisor-workspace {
+                padding: 16px;
+            }
+
+            .supervisor-login-grid,
+            .supervisor-workspace,
+            .assignment-player,
+            .assignment-row {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-height: 760px) {
@@ -378,6 +686,7 @@
 </head>
 <body>
     <div id="session-pill" class="session-pill hidden"></div>
+    <button id="supervisor-launch" class="supervisor-launch" type="button">Supervisor</button>
 
         <div id="auth-shell" class="auth-shell hidden">
         <div class="auth-card">
@@ -421,7 +730,68 @@
         </div>
     </div>
 
+    <div id="supervisor-shell" class="supervisor-shell hidden">
+        <div class="supervisor-card">
+            <div class="supervisor-header">
+                <div>
+                    <h2 class="supervisor-title">Painel do Supervisor</h2>
+                    <p class="supervisor-copy">Entra com PIN, escolhe um jogador e define os jogos e dificuldades da proxima sessao.</p>
+                </div>
+                <button id="supervisor-close" class="supervisor-close" type="button">Fechar</button>
+            </div>
+
+            <div id="supervisor-login" class="supervisor-login">
+                <div class="supervisor-login-grid">
+                    <div class="supervisor-panel">
+                        <h3>Login do supervisor</h3>
+                        <p>Usa o PIN registado na base de dados para abrir o painel de atribuicoes.</p>
+                        <div class="supervisor-login-form">
+                            <input id="supervisor-pin-input" type="password" placeholder="PIN do supervisor">
+                            <button id="supervisor-login-button" type="button">Entrar no painel</button>
+                            <div id="supervisor-status" class="supervisor-status"></div>
+                        </div>
+                    </div>
+                    <div class="supervisor-panel">
+                        <h3>O que consegues fazer aqui</h3>
+                        <p>Selecionar qualquer jogador registado, escolher os jogos ativos e definir a dificuldade para a sessao seguinte.</p>
+                        <p>Quando guardares, o plano fica associado ao jogador e sera carregado automaticamente no login seguinte.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="supervisor-workspace" class="supervisor-workspace hidden">
+                <div class="player-list">
+                    <h3>Jogadores disponiveis</h3>
+                    <p id="supervisor-session-copy">Sessao ativa.</p>
+                    <div id="player-items" class="player-items"></div>
+                </div>
+
+                <div class="assignment-panel">
+                    <h3>Treino da sessao seguinte</h3>
+                    <p>Ativa os jogos pretendidos e escolhe a dificuldade de cada um.</p>
+                    <div class="assignment-player">
+                        <div id="assignment-player-name" class="supervisor-status">Seleciona um jogador para editar o plano.</div>
+                        <select id="assignment-default-difficulty">
+                            <option value="easy">Facil</option>
+                            <option value="medium" selected>Medio</option>
+                            <option value="hard">Dificil</option>
+                        </select>
+                    </div>
+                    <div id="assignment-grid" class="assignment-grid"></div>
+                    <div class="assignment-actions">
+                        <button id="supervisor-logout" class="ghost" type="button">Terminar sessao</button>
+                        <button id="save-assignment-button" type="button">Guardar treino</button>
+                    </div>
+                    <div id="assignment-status" class="supervisor-status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="game-config.js"></script>
+    <script src="training-plan.js"></script>
     <script src="auth.js"></script>
+    <script src="supervisor.js"></script>
     <script src="menu.js"></script>
     <script src="game.js"></script>
     <script src="sketch.js"></script>

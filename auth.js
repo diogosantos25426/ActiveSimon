@@ -59,6 +59,10 @@ function readFaceSession() {
 function syncFaceSession() {
     authState.profile = readFaceSession();
 
+    if (window.syncTrainingPlanWithSession) {
+        window.syncTrainingPlanWithSession(authState.profile);
+    }
+
     if (authState.profile) {
         dismissAuthPanel();
     } else {
@@ -92,6 +96,9 @@ function openFaceLogin(mode) {
 function logoutPlayer() {
     authState.profile = null;
     localStorage.removeItem(FACE_SESSION_KEY);
+    if (window.syncTrainingPlanWithSession) {
+        window.syncTrainingPlanWithSession(null);
+    }
     updateSessionPill();
     renderAuthPanel('Sessao terminada.');
 }

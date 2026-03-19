@@ -34,6 +34,7 @@ function drawMenu() {
   drawMenuBackground();
 
   const player = window.getCurrentPlayer ? window.getCurrentPlayer() : null;
+  const trainingSummary = window.getTrainingSummary ? window.getTrainingSummary() : null;
   const btnWidth = min(width * 0.52, 340);
 
   push();
@@ -46,7 +47,7 @@ function drawMenu() {
   textSize(height * 0.085);
   text("SIMON DIZ", 0, -height * 0.3);
 
-  drawPlayerPanel(player);
+  drawPlayerPanel(player, trainingSummary);
 
   fill(220, 238, 255);
   textStyle(NORMAL);
@@ -73,38 +74,86 @@ function drawMenu() {
   pop();
 }
 
-function drawPlayerPanel(player) {
+function drawPlayerPanel(player, trainingSummary) {
+  const panelWidth = min(width * 0.68, 520);
+
   push();
   translate(0, -height * 0.21, 3);
   rectMode(CENTER);
   noStroke();
   fill(5, 14, 28, 170);
-  rect(0, 0, min(width * 0.62, 460), 82, 24);
+  rect(0, 0, panelWidth, 104, 24);
   stroke(115, 217, 255, 60);
   strokeWeight(1.5);
   noFill();
-  rect(0, 0, min(width * 0.62, 460), 82, 24);
+  rect(0, 0, panelWidth, 104, 24);
 
   textAlign(CENTER, CENTER);
   if (player) {
     fill(244, 251, 255);
     textStyle(BOLD);
     textSize(18);
-    text(`Jogador: ${player.full_name}`, 0, -12);
+    text(`Jogador: ${player.full_name}`, 0, -22);
     fill(119, 242, 197);
     textStyle(NORMAL);
     textSize(15);
-    text(`Supervisor: ${player.supervisor_name || 'Nao associado'}`, 0, 14);
+    text(`Supervisor: ${player.supervisor_name || 'Nao associado'}`, 0, 2);
+    fill(255, 209, 102);
+    textSize(13);
+    if (trainingSummary) {
+      text(`Plano: ${trainingSummary.gameName} | ${trainingSummary.difficultyLabel}`, 0, 24);
+      if ((trainingSummary.totalAssignments || 0) > 1) {
+        drawTrainingSelector(panelWidth);
+      }
+    } else {
+      text("Plano: sem jogos ativos atribuidos", 0, 24);
+    }
   } else {
     fill(244, 251, 255);
     textStyle(BOLD);
     textSize(18);
-    text("Sessao de jogador inativa", 0, -10);
+    text("Sessao de jogador inativa", 0, -18);
     fill(255, 209, 102);
     textStyle(NORMAL);
     textSize(15);
-    text("Faz login facial para entrares no circuito de treino.", 0, 16);
+    text("Faz login facial para entrares no circuito de treino.", 0, 6);
+    textSize(13);
+    fill(115, 217, 255);
+    text("O plano do supervisor sera carregado aqui quando existir.", 0, 28);
   }
+  pop();
+}
+
+function getTrainingSelectorBounds(panelWidth = min(width * 0.68, 520)) {
+  return {
+    left: { x: -panelWidth / 2 + 26, y: 24, w: 26, h: 26 },
+    right: { x: panelWidth / 2 - 26, y: 24, w: 26, h: 26 }
+  };
+}
+
+function drawTrainingSelector(panelWidth) {
+  const bounds = getTrainingSelectorBounds(panelWidth);
+  drawSelectorButton(bounds.left, "<");
+  drawSelectorButton(bounds.right, ">");
+}
+
+function drawSelectorButton(bounds, label) {
+  push();
+  translate(bounds.x, bounds.y, 4);
+  rectMode(CENTER);
+  noStroke();
+  fill(8, 22, 38, 220);
+  rect(0, 0, bounds.w, bounds.h, 999);
+  stroke(115, 217, 255, 120);
+  strokeWeight(1.2);
+  noFill();
+  rect(0, 0, bounds.w, bounds.h, 999);
+  noStroke();
+  fill(244, 251, 255);
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+  textSize(15);
+  text(label, 0, -1);
   pop();
 }
 
@@ -266,9 +315,35 @@ function menuMousePressed() {
       return;
     }
 
+    const trainingSummary = window.getTrainingSummary ? window.getTrainingSummary() : null;
+    if (trainingSummary && (trainingSummary.totalAssignments || 0) > 1) {
+      const selectorBounds = getTrainingSelectorBounds();
+      const panelOffsetY = -height * 0.21;
+
+      if (
+        abs(mx - selectorBounds.left.x) < selectorBounds.left.w / 2 &&
+        abs(my - (panelOffsetY + selectorBounds.left.y)) < selectorBounds.left.h / 2
+      ) {
+        if (window.cycleTrainingSelection) window.cycleTrainingSelection(-1);
+        return;
+      }
+
+      if (
+        abs(mx - selectorBounds.right.x) < selectorBounds.right.w / 2 &&
+        abs(my - (panelOffsetY + selectorBounds.right.y)) < selectorBounds.right.h / 2
+      ) {
+        if (window.cycleTrainingSelection) window.cycleTrainingSelection(1);
+        return;
+      }
+    }
+
     if (abs(mx) < btnW / 2 && abs(my - (-50)) < btnH / 2) {
       if (window.requireAuth && !window.requireAuth('Tens de entrar antes de jogar.')) return;
-      startNewGame();
+      if (window.startAssignedTraining) {
+        window.startAssignedTraining();
+      } else {
+        startNewGame();
+      }
     }
     if (abs(mx) < btnW / 2 && abs(my - 30) < btnH / 2) state = "MANUAL";
     if (abs(mx) < btnW / 2 && abs(my - 110) < btnH / 2) state = "CALIBRATE";

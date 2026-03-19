@@ -17,6 +17,10 @@ function setup() {
     window.initAuthUI();
   }
 
+  if (window.initSupervisorPanel) {
+    window.initSupervisorPanel();
+  }
+
   video = createCapture(VIDEO);
   video.size(640, 480);
   video.hide();
