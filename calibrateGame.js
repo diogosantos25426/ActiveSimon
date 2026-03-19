@@ -1,63 +1,86 @@
-
-
-function preloadCalibrate() {
-  imgSkeleton = loadImage('assets/esqueleto.png');
+function preloadCalibrateGame() {
+  imgSkeleton = loadImage("assets/esqueleto.png");
 }
 
-function drawCalibrateScreen() {
-  push();
+function drawCalibrateGameScreen() {
   background(20);
-  
-  // 1. Desenhar a Imagem do Esqueleto ao fundo
+
   push();
-  translate(0, 0, -50);
+  translate(0, 0, -70);
   imageMode(CENTER);
   if (imgSkeleton) {
-    // Ajusta o tamanho da imagem para caber no ecrã
-    let aspect = imgSkeleton.width / imgSkeleton.height;
-    image(imgSkeleton, 0, 0, height * aspect * 0.8, height * 0.8);
+    const aspect = imgSkeleton.width / imgSkeleton.height;
+    const targetHeight = min(height * 0.72, width * 0.78);
+    image(imgSkeleton, 0, 10, targetHeight * aspect, targetHeight);
   }
   pop();
 
-  // 2. Título
-  fill(255);
+  push();
+  noStroke();
+  translate(0, 0, -45);
+  fill(6, 15, 28, 118);
+  rectMode(CENTER);
+  rect(0, 0, width, height);
+  pop();
+
+  push();
+  fill(255, 209, 102);
   textAlign(CENTER, CENTER);
-  textSize(30);
-  text("CALIBRAÇÃO BIOMECÂNICA", 0, -height * 0.4);
+  textStyle(BOLD);
+  textSize(min(width * 0.038, 30));
+  text("SELECIONE A AREA DE TREINO", 0, -height * 0.43);
+  fill(235, 244, 255);
+  textStyle(NORMAL);
+  textSize(min(width * 0.02, 16));
+  text("Passa o rato sobre um ponto para veres a zona e clica para iniciar o treino.", 0, -height * 0.385);
+  pop();
 
-  // 3. Desenhar os 8 Círculos
-  let mx = mouseX - width / 2;
-  let my = mouseY - height / 2;
+  const mx = mouseX - width / 2;
+  const my = mouseY - height / 2;
+  let hoveredPoint = null;
 
-  for (let pt of calibrationPoints) {
-    let d = dist(mx, my, pt.x, pt.y);
-    let isHover = d < 25; // Raio do círculo
+  for (const pt of calibrationPoints) {
+    const d = dist(mx, my, pt.x, pt.y);
+    const isHover = d < 25;
+    if (isHover) hoveredPoint = pt;
 
     push();
     translate(pt.x, pt.y, 10);
-    
-    // Se estiver em hover, fica vermelho sólido, senão fica transparente
+    stroke(255, isHover ? 255 : 150);
+    strokeWeight(isHover ? 3 : 1);
+    fill(255, 0, 0, isHover ? 255 : 120);
+    ellipse(0, 0, isHover ? 45 : 35, isHover ? 45 : 35);
+
     if (isHover) {
-      fill(255, 0, 0, 255); 
-      stroke(255);
-      strokeWeight(2);
-    } else {
-      fill(255, 0, 0, 100); 
-      noStroke();
-    }
-    
-    ellipse(0, 0, 50, 50);
-    
-    // Etiqueta pequena
-    if (isHover) {
+      textAlign(CENTER, CENTER);
+      textSize(14);
+      rectMode(CENTER);
+      fill(0, 200);
+      rect(0, 40, textWidth(pt.label) + 18, 24, 6);
       fill(255);
-      textSize(12);
+      noStroke();
       text(pt.label, 0, 40);
     }
     pop();
   }
 
-  // 4. Botão Voltar
-  drawMenuButton("VOLTAR", 0, height * 0.35, 150);
-  pop();
+  if (hoveredPoint) {
+    push();
+    translate(0, height * 0.29, 20);
+    rectMode(CENTER);
+    textAlign(CENTER, CENTER);
+    noStroke();
+    fill(7, 23, 41, 230);
+    rect(0, 0, min(width * 0.72, 420), 50, 14);
+    fill(255, 209, 102);
+    textStyle(BOLD);
+    textSize(min(width * 0.028, 20));
+    text(hoveredPoint.label, 0, 1);
+    pop();
+  }
+
+  drawMenuButton("VOLTAR", 0, height * 0.4, min(width * 0.34, 180));
 }
+
+window.preloadCalibrateGame = preloadCalibrateGame;
+window.drawCalibrateGameScreen = drawCalibrateGameScreen;

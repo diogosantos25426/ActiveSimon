@@ -1,17 +1,47 @@
 let bodyPose, video, poses = [], connections;
 let myFont;
 let basketImg;
+let gameCloseButton;
+let sessionPillElement;
+let supervisorLaunchElement;
+
+function setGameChromeVisible(isVisible) {
+  if (gameCloseButton) {
+    gameCloseButton.classList.toggle('hidden', !isVisible);
+  }
+
+  if (sessionPillElement) {
+    sessionPillElement.classList.toggle('in-game-hidden', isVisible);
+  }
+
+  if (supervisorLaunchElement) {
+    supervisorLaunchElement.classList.toggle('in-game-hidden', isVisible);
+  }
+}
 
 function preload() {
   bodyPose = ml5.bodyPose("BlazePose");
   myFont = loadFont('https://cdnjs.cloudflare.com/ajax/libs/topcoat/0.8.0/font/SourceCodePro-Bold.otf');
-  basketImg = loadImage('assets/cesto.png');
+  basketImg = loadImage('assets/Cesto.png');
+  if (window.preloadGames2Modules) {
+    window.preloadGames2Modules();
+  }
   preloadMenu();
 }
 
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL);
   textFont(myFont);
+  gameCloseButton = document.getElementById('game-close-button');
+  sessionPillElement = document.getElementById('session-pill');
+  supervisorLaunchElement = document.getElementById('supervisor-launch');
+  if (gameCloseButton) {
+    gameCloseButton.addEventListener('click', () => {
+      if (window.exitActiveGame) {
+        window.exitActiveGame();
+      }
+    });
+  }
 
   if (window.initAuthUI) {
     window.initAuthUI();
@@ -19,6 +49,10 @@ function setup() {
 
   if (window.initSupervisorPanel) {
     window.initSupervisorPanel();
+  }
+
+  if (window.registerGames2Implementations) {
+    window.registerGames2Implementations();
   }
 
   video = createCapture(VIDEO);
@@ -39,6 +73,15 @@ function windowResized() {
 function draw() {
   background(20);
 
+  const showGameCloseButton = (
+    state === "SHOWING" ||
+    state === "PLAYER" ||
+    state === "WAITING" ||
+    state === "GAMEOVER" ||
+    state === "CONGRATS"
+  );
+  setGameChromeVisible(showGameCloseButton);
+
   if (state === "MENU") {
     drawMenu();
   } else if (state === "MANUAL") {
@@ -49,7 +92,7 @@ function draw() {
     drawSettingsScreen();
   } else if (state === "SHOWING" || state === "PLAYER" || state === "WAITING") {
     gameLoop();
-  } else if (state === "GAMEOVER") {
+  } else if (state === "GAMEOVER" || state === "CONGRATS") {
     drawGameOver();
   }
 }
@@ -57,8 +100,9 @@ function draw() {
 function mousePressed() {
   menuMousePressed();
 
-  if (state === "GAMEOVER") {
+  if (state === "GAMEOVER" || state === "CONGRATS") {
     state = "MENU";
+    setGameChromeVisible(false);
   }
 }
 

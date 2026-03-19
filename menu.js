@@ -3,19 +3,29 @@ let imgSkeleton;
 let state = "MENU";
 
 let calibrationPoints = [
-  { x: 0, y: -300, label: "Cabeca" },
-  { x: -70, y: -200, label: "Ombro Esq" },
-  { x: 70, y: -200, label: "Ombro Dir" },
-  { x: -110, y: -80, label: "Cotovelo Esq" },
-  { x: 110, y: -80, label: "Cotovelo Dir" },
-  { x: -55, y: 155, label: "Joelho Esq" },
-  { x: 55, y: 155, label: "Joelho Dir" },
-  { x: 0, y: -40, label: "Cintura" }
+  // Superiores
+  { x: -70, y: -180, label: "Ombro Esquerdo",   state: "GAME_OMBRO_ESQ" },
+  { x: 70,  y: -180, label: "Ombro Direito",    state: "GAME_OMBRO_DIR" },
+  { x: 0,   y: -210, label: "Ombros (Geral)",   state: "GAME_OMBROS" },
+  { x: -140,y: -100, label: "M. Sup. Esquerda", state: "GAME_SUP_ESQ" },
+  { x: 140, y: -100, label: "M. Sup. Direita",  state: "GAME_SUP_DIR" },
+  { x: 0,   y: -120, label: "M. Superiores",    state: "GAME_SUP_GERAL" },
+
+  // Tronco/Cintura
+  { x: 0,   y: -20,  label: "Cintura",          state: "GAME_CINTURA" },
+
+  // Inferiores
+  { x: -60, y: 180,  label: "M. Inf. Esquerda", state: "GAME_INF_ESQ" },
+  { x: 60,  y: 180,  label: "M. Inf. Direita",  state: "GAME_INF_DIR" },
+  { x: 0,   y: 250,  label: "M. Inf. Geral",    state: "GAME_INF_GERAL" }
 ];
 
 function preloadMenu() {
   bgMenu = loadImage('assets/bgMenu.jpg');
   imgSkeleton = loadImage('assets/esqueleto.png');
+  if (window.preloadCalibrateGame) {
+    window.preloadCalibrateGame();
+  }
 }
 
 function drawMenuBackground() {
@@ -35,23 +45,25 @@ function drawMenu() {
 
   const player = window.getCurrentPlayer ? window.getCurrentPlayer() : null;
   const trainingSummary = window.getTrainingSummary ? window.getTrainingSummary() : null;
-  const btnWidth = min(width * 0.52, 340);
+  const btnWidth = min(width * 0.6, 360);
+  const titleSize = min(width * 0.09, height * 0.11, 84);
+  const subtitleSize = min(width * 0.024, 18);
 
   push();
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
   fill(115, 217, 255, 70);
-  textSize(height * 0.09);
+  textSize(titleSize * 1.04);
   text("SIMON DIZ", 0, -height * 0.302);
   fill(255, 209, 102);
-  textSize(height * 0.085);
+  textSize(titleSize);
   text("SIMON DIZ", 0, -height * 0.3);
 
   drawPlayerPanel(player, trainingSummary);
 
   fill(220, 238, 255);
   textStyle(NORMAL);
-  textSize(16);
+  textSize(subtitleSize);
   if (player) {
     text("Pronto para treinar memoria, coordenacao e foco.", 0, -height * 0.145);
   } else {
@@ -75,31 +87,35 @@ function drawMenu() {
 }
 
 function drawPlayerPanel(player, trainingSummary) {
-  const panelWidth = min(width * 0.68, 520);
+  const panelWidth = min(width * 0.78, 560);
+  const panelHeight = width < 720 ? 118 : 104;
+  const titleSize = width < 720 ? 16 : 18;
+  const metaSize = width < 720 ? 13 : 15;
+  const planSize = width < 720 ? 12 : 13;
 
   push();
   translate(0, -height * 0.21, 3);
   rectMode(CENTER);
   noStroke();
   fill(5, 14, 28, 170);
-  rect(0, 0, panelWidth, 104, 24);
+  rect(0, 0, panelWidth, panelHeight, 24);
   stroke(115, 217, 255, 60);
   strokeWeight(1.5);
   noFill();
-  rect(0, 0, panelWidth, 104, 24);
+  rect(0, 0, panelWidth, panelHeight, 24);
 
   textAlign(CENTER, CENTER);
   if (player) {
     fill(244, 251, 255);
     textStyle(BOLD);
-    textSize(18);
+    textSize(titleSize);
     text(`Jogador: ${player.full_name}`, 0, -22);
     fill(119, 242, 197);
     textStyle(NORMAL);
-    textSize(15);
+    textSize(metaSize);
     text(`Supervisor: ${player.supervisor_name || 'Nao associado'}`, 0, 2);
     fill(255, 209, 102);
-    textSize(13);
+    textSize(planSize);
     if (trainingSummary) {
       text(`Plano: ${trainingSummary.gameName} | ${trainingSummary.difficultyLabel}`, 0, 24);
       if ((trainingSummary.totalAssignments || 0) > 1) {
@@ -111,13 +127,13 @@ function drawPlayerPanel(player, trainingSummary) {
   } else {
     fill(244, 251, 255);
     textStyle(BOLD);
-    textSize(18);
+    textSize(titleSize);
     text("Sessao de jogador inativa", 0, -18);
     fill(255, 209, 102);
     textStyle(NORMAL);
-    textSize(15);
+    textSize(metaSize);
     text("Faz login facial para entrares no circuito de treino.", 0, 6);
-    textSize(13);
+    textSize(planSize);
     fill(115, 217, 255);
     text("O plano do supervisor sera carregado aqui quando existir.", 0, 28);
   }
@@ -201,6 +217,11 @@ function isPointerInside(bounds) {
 }
 
 function drawCalibrateScreen() {
+  if (window.drawCalibrateGameScreen) {
+    window.drawCalibrateGameScreen();
+    return;
+  }
+
   background(8, 14, 26);
 
   push();
@@ -251,17 +272,68 @@ function drawCalibrateScreen() {
 
 function drawManualScreen() {
   drawMenuBackground();
+
   push();
+  noStroke();
+  translate(0, 0, -40);
+  fill(6, 15, 28, 155);
+  rectMode(CENTER);
+  rect(0, 0, width, height);
+  pop();
+
+  push();
+  const panelWidth = min(width * 0.9, 860);
+  const panelHeight = min(height * 0.72, 520);
+  const titleSize = min(width * 0.043, 38);
+  const subtitleSize = min(width * 0.021, 18);
+  const bodyTextSize = width < 720 ? 14 : min(width * 0.02, 19);
+  const hintTextSize = width < 720 ? 12 : min(width * 0.0165, 15);
+  const panelTop = -panelHeight / 2 + 54;
+
+  translate(0, -10, 5);
+  rectMode(CENTER);
+  noStroke();
+  fill(7, 18, 31, 220);
+  rect(0, 20, panelWidth, panelHeight, 28);
+  stroke(255, 209, 102, 90);
+  strokeWeight(2);
+  noFill();
+  rect(0, 20, panelWidth, panelHeight, 28);
+
   fill(255, 209, 102);
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
-  textSize(36);
-  text("COMO JOGAR", 0, -100);
+  textSize(titleSize);
+  text("COMO JOGAR", 0, panelTop);
+
+  fill(119, 242, 197);
+  textSize(subtitleSize);
+  text("Segue os movimentos e completa o treino com calma.", 0, panelTop + 40);
+
   fill(235, 244, 255);
   textStyle(NORMAL);
-  textSize(20);
-  text("1. Memoriza a sequencia de cubos.\n2. Toca no cubo certo com a mao direita.\n3. Segue o rasto branco para te guiares.", 0, 20);
-  drawMenuButton("VOLTAR", 0, 180, 180, {
+  textSize(bodyTextSize);
+  textLeading(bodyTextSize * 1.6);
+  text(
+    "1. Escolhe a zona do corpo que queres treinar.\n\n2. Observa o movimento pedido e imita-o diante da camara.\n\n3. Completa as repeticoes ao teu ritmo e acompanha o feedback no ecra.\n\n4. Usa o botao Fechar no jogo sempre que quiseres voltar ao menu.",
+    0,
+    panelTop + 138,
+    panelWidth - 110,
+    panelHeight - 240
+  );
+
+  fill(255, 209, 102);
+  textSize(hintTextSize);
+  textLeading(hintTextSize * 1.45);
+  text(
+    "Dica: coloca-te centrado e com espaco suficiente para mexer os bracos e pernas.",
+    0,
+    panelTop + panelHeight - 126,
+    panelWidth - 120,
+    58
+  );
+
+  drawMenuButton("VOLTAR", 0, panelTop + panelHeight - 56, min(190, panelWidth * 0.38), {
     base: color(44, 115, 255, 210),
     glow: color(115, 217, 255, 90)
   });
@@ -271,7 +343,7 @@ function drawManualScreen() {
 function drawMenuButton(label, x, y, w, theme = {}) {
   let mx = mouseX - width / 2;
   let my = mouseY - height / 2;
-  let h = 56;
+  let h = width < 720 ? 50 : 56;
   let isHover = (mx > x - w / 2 && mx < x + w / 2 && my > y - h / 2 && my < y + h / 2);
   let base = theme.base || color(40, 100, 250);
   let glow = theme.glow || color(115, 217, 255, 70);
@@ -294,7 +366,7 @@ function drawMenuButton(label, x, y, w, theme = {}) {
   fill(250, 253, 255);
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
-  textSize(21);
+  textSize(width < 720 ? 18 : 21);
   text(label, 0, 0);
   pop();
 }
@@ -349,6 +421,12 @@ function menuMousePressed() {
     if (abs(mx) < btnW / 2 && abs(my - 110) < btnH / 2) state = "CALIBRATE";
   }
   else if (state === "CALIBRATE") {
+    for (let pt of calibrationPoints) {
+      if (dist(mx, my, pt.x, pt.y) < 25) {
+        if (window.requireAuth && !window.requireAuth('Tens de entrar antes de iniciar um treino.')) return;
+        if (window.startCalibrationGame && window.startCalibrationGame(pt.label)) return;
+      }
+    }
     if (abs(mx) < 90 && abs(my - (height * 0.35)) < btnH / 2) state = "MENU";
   }
   else if (state === "MANUAL") {

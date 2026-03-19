@@ -269,12 +269,13 @@
             backdrop-filter: blur(14px);
             overflow: hidden;
             box-shadow: 0 18px 32px rgba(0, 0, 0, 0.22);
+            transition: opacity 180ms ease, transform 180ms ease;
         }
 
         .supervisor-launch {
             position: fixed;
-            top: 18px;
-            right: 18px;
+            top: 88px;
+            left: 18px;
             z-index: 24;
             padding: 11px 16px;
             border: 1px solid rgba(115, 217, 255, 0.2);
@@ -286,6 +287,43 @@
             text-transform: uppercase;
             cursor: pointer;
             backdrop-filter: blur(12px);
+            transition: opacity 180ms ease, transform 180ms ease;
+        }
+
+        .game-close-button {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            z-index: 28;
+            min-width: 168px;
+            padding: 13px 18px;
+            border: 1px solid rgba(255, 232, 232, 0.92);
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(205, 36, 36, 0.96), rgba(242, 74, 74, 0.94));
+            color: #fff7f7;
+            font-size: 16px;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.24);
+            transition: transform 180ms ease, box-shadow 180ms ease;
+        }
+
+        .game-close-button.hidden {
+            display: none;
+        }
+
+        .game-close-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 36px rgba(0, 0, 0, 0.28);
+        }
+
+        .session-pill.in-game-hidden,
+        .supervisor-launch.in-game-hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-10px);
         }
 
         .supervisor-shell {
@@ -621,9 +659,18 @@
             }
 
             .supervisor-launch {
-                top: auto;
+                top: 72px;
+                left: 12px;
+                right: auto;
+                bottom: auto;
+            }
+
+            .game-close-button {
+                top: 12px;
                 right: 12px;
-                bottom: 12px;
+                min-width: 150px;
+                padding: 12px 14px;
+                font-size: 14px;
             }
 
             .supervisor-shell {
@@ -687,6 +734,7 @@
 <body>
     <div id="session-pill" class="session-pill hidden"></div>
     <button id="supervisor-launch" class="supervisor-launch" type="button">Supervisor</button>
+    <button id="game-close-button" class="game-close-button hidden" type="button">Fechar</button>
 
         <div id="auth-shell" class="auth-shell hidden">
         <div class="auth-card">
@@ -789,9 +837,21 @@
     </div>
 
     <script src="game-config.js"></script>
+    <script src="games2/game_cintura.js"></script>
+    <script src="games2/game_membros_superiores_direita.js"></script>
+    <script src="games2/game_membros_superiores_esquerda.js"></script>
+    <script src="games2/game_ombros_geral.js"></script>
+    <script src="games2/game_ombro_dir.js"></script>
+    <script src="games2/game_ombro_esq.js"></script>
+    <script src="games2/game_sup_geral.js"></script>
+    <script src="games2/membros_inferior_direita.js"></script>
+    <script src="games2/membros_inferior_esquerda.js"></script>
+    <script src="games2/membros_inferior_juntos.js"></script>
+    <script src="games2-integration.js"></script>
     <script src="training-plan.js"></script>
     <script src="auth.js"></script>
     <script src="supervisor.js"></script>
+    <script src="calibrateGame.js"></script>
     <script src="menu.js"></script>
     <script src="game.js"></script>
     <script src="sketch.js"></script>

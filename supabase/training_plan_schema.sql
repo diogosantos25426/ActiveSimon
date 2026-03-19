@@ -35,8 +35,8 @@ alter table public.player_game_assignments
 
 -- Exemplos para quando os jogos estiverem prontos:
 -- insert into public.games_catalog (code, name, summary, implementation_key, status, active) values
--- ('simon_memory_right_hand', 'Simon Memoria - Mao Direita', 'Replica sequencias com a mao direita.', 'simon_memory', 'ready', true),
--- ('simon_memory_left_hand', 'Simon Memoria - Mao Esquerda', 'Versao futura para mao esquerda.', 'future_game', 'planned', false);
+-- ('lower_right', 'Membros Inferiores - Direita', 'Exercicios de perna direita.', 'games2_lower_right', 'ready', true),
+-- ('waist', 'Cintura', 'Inclinacao e rotacao do tronco.', 'games2_waist', 'ready', true);
 
 -- insert into public.player_game_assignments (player_profile_id, game_code, difficulty, enabled, sort_order, assigned_by_supervisor_id) values
--- (1, 'simon_memory_right_hand', 'medium', true, 1, 1);
+-- ('uuid-do-jogador', 'lower_right', 'medium', true, 1, 1);

@@ -31,8 +31,8 @@ function getDefaultTrainingPlan() {
     source: "default-local",
     assignments: [
       {
-        id: "default-right-hand-medium",
-        gameCode: "simon_memory_right_hand",
+        id: "default-lower-right-medium",
+        gameCode: "lower_right",
         difficulty: "medium",
         enabled: true,
         sortOrder: 1
