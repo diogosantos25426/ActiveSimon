@@ -90,7 +90,10 @@ function getEnabledAssignments() {
     .filter((assignment) => assignment.enabled)
     .filter((assignment) => {
       const game = window.getGameDefinition ? window.getGameDefinition(assignment.gameCode) : null;
-      return Boolean(game && game.enabled);
+      const hasImplementation = window.hasGameImplementation
+        ? window.hasGameImplementation(game?.implementationKey)
+        : true;
+      return Boolean(game && game.enabled && hasImplementation);
     });
 }
 
@@ -118,16 +121,18 @@ function cycleTrainingSelection(direction = 1) {
 }
 
 function getTrainingSummary() {
-  const assignment = getSelectedTrainingAssignment();
-  if (!assignment || !window.getGameDefinition) return null;
+  const enabledAssignments = getEnabledAssignments();
+  if (enabledAssignments.length === 0 || !window.getGameDefinition) return null;
 
-  const game = window.getGameDefinition(assignment.gameCode);
+  const gameNames = enabledAssignments
+    .map((assignment) => window.getGameDefinition(assignment.gameCode)?.name)
+    .filter(Boolean);
+
   return {
-    ...assignment,
-    gameName: game.name,
-    difficultyLabel: window.DIFFICULTY_PRESETS?.[assignment.difficulty]?.label || assignment.difficulty,
-    status: game.status,
-    totalAssignments: getEnabledAssignments().length,
+    totalAssignments: enabledAssignments.length,
+    gameName: gameNames[0] || "Treino atribuido",
+    gamesLabel: gameNames.slice(0, 2).join(" · "),
+    hasMoreGames: gameNames.length > 2,
     sourceLabel: trainingState.sourceLabel
   };
 }
@@ -214,14 +219,30 @@ async function syncTrainingPlanWithSession(player) {
 }
 
 function startAssignedTraining() {
-  const assignment = getSelectedTrainingAssignment();
-  if (!assignment) {
-    alert("Ainda nao existe nenhum jogo ativo no plano deste utilizador.");
+  const enabledAssignments = getEnabledAssignments();
+  const fallbackGames = window.getEnabledGames
+    ? window.getEnabledGames().filter((game) => (
+        window.hasGameImplementation ? window.hasGameImplementation(game.implementationKey) : true
+      ))
+    : [];
+
+  if (enabledAssignments.length === 0 && fallbackGames.length === 0) {
+    alert("Ainda nao existe nenhum jogo jogavel atribuido a este utilizador.");
     return;
   }
 
+  const randomAssignment = enabledAssignments.length > 0
+    ? enabledAssignments[Math.floor(Math.random() * enabledAssignments.length)]
+    : null;
+
   if (typeof window.startNewGame === "function") {
-    window.startNewGame(assignment.gameCode, assignment.difficulty);
+    if (randomAssignment) {
+      window.startNewGame(randomAssignment.gameCode, "medium");
+      return;
+    }
+
+    const fallbackGame = fallbackGames[Math.floor(Math.random() * fallbackGames.length)];
+    window.startNewGame(fallbackGame.code, "medium");
   }
 }
 

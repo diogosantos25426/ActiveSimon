@@ -529,7 +529,7 @@
 
         .assignment-player {
             display: grid;
-            grid-template-columns: 1fr 200px;
+            grid-template-columns: 1fr;
             gap: 12px;
             margin-bottom: 14px;
         }
@@ -541,7 +541,7 @@
 
         .assignment-row {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 160px 100px;
+            grid-template-columns: minmax(0, 1fr);
             gap: 12px;
             align-items: center;
             padding: 12px 14px;
@@ -783,7 +783,7 @@
             <div class="supervisor-header">
                 <div>
                     <h2 class="supervisor-title">Painel do Supervisor</h2>
-                    <p class="supervisor-copy">Entra com PIN, escolhe um jogador e define os jogos e dificuldades da proxima sessao.</p>
+                    <p class="supervisor-copy">Entra com PIN, escolhe um jogador e marca os jogos da proxima sessao.</p>
                 </div>
                 <button id="supervisor-close" class="supervisor-close" type="button">Fechar</button>
             </div>
@@ -792,7 +792,7 @@
                 <div class="supervisor-login-grid">
                     <div class="supervisor-panel">
                         <h3>Login do supervisor</h3>
-                        <p>Usa o PIN registado na base de dados para abrir o painel de atribuicoes.</p>
+                        <p>Usa o PIN do supervisor para abrir o painel de atribuicoes.</p>
                         <div class="supervisor-login-form">
                             <input id="supervisor-pin-input" type="password" placeholder="PIN do supervisor">
                             <button id="supervisor-login-button" type="button">Entrar no painel</button>
@@ -801,8 +801,8 @@
                     </div>
                     <div class="supervisor-panel">
                         <h3>O que consegues fazer aqui</h3>
-                        <p>Selecionar qualquer jogador registado, escolher os jogos ativos e definir a dificuldade para a sessao seguinte.</p>
-                        <p>Quando guardares, o plano fica associado ao jogador e sera carregado automaticamente no login seguinte.</p>
+                        <p>Escolher os jogos locais ativos para o jogador com sessao iniciada.</p>
+                        <p>Quando guardares, o plano fica guardado localmente e sera usado no proximo clique em jogar.</p>
                     </div>
                 </div>
             </div>
@@ -815,15 +815,10 @@
                 </div>
 
                 <div class="assignment-panel">
-                    <h3>Treino da sessao seguinte</h3>
-                    <p>Ativa os jogos pretendidos e escolhe a dificuldade de cada um.</p>
+                    <h3>Jogos da sessao seguinte</h3>
+                    <p>Ativa os jogos pretendidos para o jogador selecionado.</p>
                     <div class="assignment-player">
                         <div id="assignment-player-name" class="supervisor-status">Seleciona um jogador para editar o plano.</div>
-                        <select id="assignment-default-difficulty">
-                            <option value="easy">Facil</option>
-                            <option value="medium" selected>Medio</option>
-                            <option value="hard">Dificil</option>
-                        </select>
                     </div>
                     <div id="assignment-grid" class="assignment-grid"></div>
                     <div class="assignment-actions">

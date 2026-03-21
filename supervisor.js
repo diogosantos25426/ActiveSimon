@@ -20,7 +20,6 @@ function cacheSupervisorElements() {
   supervisorUI.sessionCopy = document.getElementById("supervisor-session-copy");
   supervisorUI.playerItems = document.getElementById("player-items");
   supervisorUI.playerName = document.getElementById("assignment-player-name");
-  supervisorUI.defaultDifficulty = document.getElementById("assignment-default-difficulty");
   supervisorUI.assignmentGrid = document.getElementById("assignment-grid");
   supervisorUI.assignmentStatus = document.getElementById("assignment-status");
   supervisorUI.saveButton = document.getElementById("save-assignment-button");
@@ -79,64 +78,52 @@ async function validateSupervisorPin(pin) {
 }
 
 async function fetchSupervisorPlayers() {
-  const client = getSupervisorClient();
-  const { data, error } = await client
-    .from("face_profiles")
-    .select("id, name, supervisor_id")
-    .order("name", { ascending: true });
+  const currentPlayer = window.getCurrentPlayer ? window.getCurrentPlayer() : null;
+  if (!currentPlayer?.id) return [];
 
-  if (error) throw error;
-  return data || [];
+  return [{
+    id: currentPlayer.id,
+    name: currentPlayer.full_name || currentPlayer.name || "Jogador atual",
+    supervisor_id: currentPlayer.supervisor_id || null
+  }];
 }
 
 async function fetchSupervisorGames() {
-  const client = getSupervisorClient();
-  const { data, error } = await client
-    .from("games_catalog")
-    .select("code, name, summary, implementation_key, status, active")
-    .eq("active", true)
-    .order("name", { ascending: true });
-
-  if (error) throw error;
-
-  const games = (data || []).map((game) => ({
-    code: game.code,
-    name: game.name,
-    summary: game.summary || "Jogo configurado pelo supervisor.",
-    implementationKey: game.implementation_key || "future_game",
-    status: game.status || "planned",
-    enabled: game.active !== false,
-    difficulties: ["easy", "medium", "hard"]
-  }));
-
-  if (games.length === 0 && window.getGameCatalog) {
-    return window.getGameCatalog().filter((game) => game.enabled);
-  }
-
-  return games;
+  if (!window.getGameCatalog) return [];
+  return window.getGameCatalog()
+    .filter((game) => game.enabled)
+    .filter((game) => (
+      window.hasGameImplementation ? window.hasGameImplementation(game.implementationKey) : true
+    ));
 }
 
 async function fetchPlayerAssignments(playerId) {
-  const client = getSupervisorClient();
-  const { data, error } = await client
-    .from("player_game_assignments")
-    .select("id, game_code, difficulty, enabled, sort_order")
-    .eq("player_profile_id", playerId)
-    .order("sort_order", { ascending: true });
+  const storageKey = `player_training_plan:${playerId}`;
+  const stored = localStorage.getItem(storageKey);
+  if (!stored) return [];
 
-  if (error) throw error;
-  return data || [];
-}
-
-function getDifficultyLabel(value) {
-  return window.DIFFICULTY_PRESETS?.[value]?.label || value;
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed?.assignments)
+      ? parsed.assignments.map((assignment, index) => ({
+          id: assignment.id || `${assignment.gameCode}-${index}`,
+          game_code: assignment.gameCode,
+          difficulty: assignment.difficulty || "medium",
+          enabled: assignment.enabled !== false,
+          sort_order: Number.isFinite(assignment.sortOrder) ? assignment.sortOrder : index + 1
+        }))
+      : [];
+  } catch (error) {
+    console.warn("Nao foi possivel ler o plano local do jogador.", error);
+    return [];
+  }
 }
 
 function renderSupervisorPlayers() {
   if (!supervisorUI.playerItems) return;
 
   if (supervisorState.players.length === 0) {
-    supervisorUI.playerItems.innerHTML = "<div class='player-item'><strong>Sem jogadores</strong><span>Cria contas faciais primeiro.</span></div>";
+    supervisorUI.playerItems.innerHTML = "<div class='player-item'><strong>Sem jogador ativo</strong><span>Faz login facial antes de abrir o painel do supervisor.</span></div>";
     return;
   }
 
@@ -160,10 +147,9 @@ function buildAssignmentRows(playerId) {
   const existingAssignments = supervisorState.assignmentsByPlayer[playerId] || [];
   const assignmentMap = new Map(existingAssignments.map((assignment) => [assignment.game_code, assignment]));
 
-  return supervisorState.games.map((game, index) => {
+  return supervisorState.games.map((game) => {
     const existing = assignmentMap.get(game.code);
     const checked = existing ? existing.enabled !== false : false;
-    const selectedDifficulty = existing?.difficulty || "medium";
 
     return `
       <label class="assignment-row">
@@ -174,12 +160,6 @@ function buildAssignmentRows(playerId) {
             <span>${game.summary || "Jogo sem descricao."}</span>
           </div>
         </div>
-        <select data-game-difficulty="${game.code}">
-          <option value="easy" ${selectedDifficulty === "easy" ? "selected" : ""}>${getDifficultyLabel("easy")}</option>
-          <option value="medium" ${selectedDifficulty === "medium" ? "selected" : ""}>${getDifficultyLabel("medium")}</option>
-          <option value="hard" ${selectedDifficulty === "hard" ? "selected" : ""}>${getDifficultyLabel("hard")}</option>
-        </select>
-        <span>${index + 1}. ordem</span>
       </label>
     `;
   }).join("");
@@ -197,7 +177,7 @@ function renderAssignmentEditor() {
   supervisorUI.playerName.textContent = `Jogador selecionado: ${player.name}`;
 
   if (supervisorState.games.length === 0) {
-    supervisorUI.assignmentGrid.innerHTML = "<div class='assignment-row'><div class='assignment-meta'><strong>Sem jogos ativos</strong><span>Adiciona jogos em games_catalog para atribuires treino.</span></div></div>";
+    supervisorUI.assignmentGrid.innerHTML = "<div class='assignment-row'><div class='assignment-meta'><strong>Sem jogos disponiveis</strong><span>Nao foi encontrado nenhum jogo local com implementacao ativa.</span></div></div>";
     return;
   }
 
@@ -249,7 +229,7 @@ async function loginSupervisor() {
     supervisorState.session = await validateSupervisorPin(pin);
     await loadSupervisorWorkspace();
     setSupervisorMessage("");
-    setAssignmentMessage("Painel carregado. Escolhe um jogador e guarda o treino.", "success");
+    setAssignmentMessage("Painel carregado. Escolhe um jogador e marca os jogos pretendidos.", "success");
     showSupervisorWorkspace();
   } catch (error) {
     setSupervisorMessage(`Nao foi possivel entrar: ${error.message}`, "error");
@@ -262,13 +242,12 @@ function collectSelectedAssignments() {
 
   return rows.flatMap((row, index) => {
     const checkbox = row.querySelector("[data-game-enabled]");
-    const difficulty = row.querySelector("[data-game-difficulty]");
     if (!checkbox?.checked) return [];
 
     return [{
       player_profile_id: supervisorState.activePlayerId,
       game_code: checkbox.dataset.gameEnabled,
-      difficulty: difficulty?.value || supervisorUI.defaultDifficulty.value || "medium",
+      difficulty: "medium",
       enabled: true,
       sort_order: sortOrder++,
       assigned_by_supervisor_id: supervisorState.session.id
@@ -287,36 +266,34 @@ async function saveSupervisorAssignments() {
     return;
   }
 
-  const client = getSupervisorClient();
   const assignments = collectSelectedAssignments();
 
-  setAssignmentMessage("A guardar treino...");
+  setAssignmentMessage("A guardar jogos atribuidos...");
 
   try {
-    const { error: deleteError } = await client
-      .from("player_game_assignments")
-      .delete()
-      .eq("player_profile_id", supervisorState.activePlayerId);
+    const localPlan = {
+      source: "supervisor-local",
+      assignments: assignments.map((assignment, index) => ({
+        id: `${assignment.game_code}-${index}`,
+        gameCode: assignment.game_code,
+        difficulty: "medium",
+        enabled: true,
+        sortOrder: index + 1
+      }))
+    };
 
-    if (deleteError) throw deleteError;
-
-    if (assignments.length > 0) {
-      const { error: insertError } = await client
-        .from("player_game_assignments")
-        .insert(assignments);
-      if (insertError) throw insertError;
+    if (window.setTrainingPlan) {
+      window.setTrainingPlan(localPlan, supervisorState.activePlayerId);
     }
 
-    supervisorState.assignmentsByPlayer[supervisorState.activePlayerId] = await fetchPlayerAssignments(
-      supervisorState.activePlayerId
-    );
+    supervisorState.assignmentsByPlayer[supervisorState.activePlayerId] = await fetchPlayerAssignments(supervisorState.activePlayerId);
 
     const currentPlayer = window.getCurrentPlayer ? window.getCurrentPlayer() : null;
     if (currentPlayer?.id === supervisorState.activePlayerId && window.refreshTrainingPlan) {
       window.refreshTrainingPlan(currentPlayer);
     }
 
-    setAssignmentMessage("Treino guardado com sucesso para a sessao seguinte.", "success");
+    setAssignmentMessage("Jogos guardados com sucesso para a sessao seguinte.", "success");
     renderAssignmentEditor();
   } catch (error) {
     setAssignmentMessage(`Erro ao guardar treino: ${error.message}`, "error");

@@ -117,12 +117,12 @@ function drawPlayerPanel(player, trainingSummary) {
     fill(255, 209, 102);
     textSize(planSize);
     if (trainingSummary) {
-      text(`Plano: ${trainingSummary.gameName} | ${trainingSummary.difficultyLabel}`, 0, 24);
-      if ((trainingSummary.totalAssignments || 0) > 1) {
-        drawTrainingSelector(panelWidth);
-      }
+      const summaryLine = trainingSummary.totalAssignments === 1
+        ? `Jogo ativo: ${trainingSummary.gameName}`
+        : `Jogos ativos: ${trainingSummary.totalAssignments}`;
+      text(summaryLine, 0, 24);
     } else {
-      text("Plano: sem jogos ativos atribuidos", 0, 24);
+      text("Jogos: sem jogos ativos atribuidos", 0, 24);
     }
   } else {
     fill(244, 251, 255);
@@ -276,67 +276,151 @@ function drawManualScreen() {
   push();
   noStroke();
   translate(0, 0, -40);
-  fill(6, 15, 28, 155);
+  fill(4, 11, 21, 175);
   rectMode(CENTER);
   rect(0, 0, width, height);
   pop();
 
   push();
-  const panelWidth = min(width * 0.9, 860);
-  const panelHeight = min(height * 0.72, 520);
-  const titleSize = min(width * 0.043, 38);
-  const subtitleSize = min(width * 0.021, 18);
-  const bodyTextSize = width < 720 ? 14 : min(width * 0.02, 19);
-  const hintTextSize = width < 720 ? 12 : min(width * 0.0165, 15);
-  const panelTop = -panelHeight / 2 + 54;
+  const panelWidth = min(width * 0.92, 980);
+  const panelHeight = min(height * 0.76, 620);
+  const leftColumnWidth = panelWidth * 0.34;
+  const rightColumnWidth = panelWidth * 0.56;
+  const titleSize = min(width * 0.046, 42);
+  const subtitleSize = min(width * 0.02, 18);
+  const cardTitleSize = width < 720 ? 15 : 18;
+  const cardBodySize = width < 720 ? 12 : 15;
+  const hintTextSize = width < 720 ? 12 : 14;
+  const panelLeft = -panelWidth / 2;
+  const panelTop = -panelHeight / 2;
+  const backButton = getManualBackButtonBounds();
 
-  translate(0, -10, 5);
-  rectMode(CENTER);
+  translate(0, -6, 5);
+  rectMode(CORNER);
   noStroke();
-  fill(7, 18, 31, 220);
-  rect(0, 20, panelWidth, panelHeight, 28);
-  stroke(255, 209, 102, 90);
-  strokeWeight(2);
+  fill(7, 18, 31, 230);
+  rect(panelLeft, panelTop, panelWidth, panelHeight, 30);
+  stroke(255, 209, 102, 70);
+  strokeWeight(1.8);
   noFill();
-  rect(0, 20, panelWidth, panelHeight, 28);
+  rect(panelLeft, panelTop, panelWidth, panelHeight, 30);
+
+  noStroke();
+  fill(10, 26, 43, 232);
+  rect(panelLeft + 24, panelTop + 24, leftColumnWidth - 36, panelHeight - 48, 26);
+  fill(9, 21, 36, 180);
+  rect(panelLeft + leftColumnWidth, panelTop + 24, rightColumnWidth, panelHeight - 48, 26);
 
   fill(255, 209, 102);
-  textAlign(CENTER, CENTER);
+  textAlign(LEFT, TOP);
   textStyle(BOLD);
+  textSize(14);
+  text("GUIA RAPIDO", panelLeft + 46, panelTop + 44);
+
   textSize(titleSize);
-  text("COMO JOGAR", 0, panelTop);
+  text("COMO JOGAR", panelLeft + 42, panelTop + 74);
 
   fill(119, 242, 197);
   textSize(subtitleSize);
-  text("Segue os movimentos e completa o treino com calma.", 0, panelTop + 40);
+  text("Uma vista simples do fluxo do jogo para a apresentacao final.", panelLeft + 42, panelTop + 128, leftColumnWidth - 76, 70);
+
+  drawManualStepCard(panelLeft + 40, panelTop + 200, leftColumnWidth - 72, 86, "1. Entrar", "Faz login facial para desbloquear a sessao do jogador.");
+  drawManualStepCard(panelLeft + 40, panelTop + 298, leftColumnWidth - 72, 86, "2. Jogar", "Carrega em JOGAR para abrir um dos jogos ativos de forma aleatoria.");
+  drawManualStepCard(panelLeft + 40, panelTop + 396, leftColumnWidth - 72, 86, "3. Sair", "Usa FECHAR dentro do jogo para regressar rapidamente ao menu.");
+
+  const rightX = panelLeft + leftColumnWidth + 28;
+  const rightTop = panelTop + 44;
+
+  fill(235, 244, 255);
+  textAlign(LEFT, TOP);
+  textStyle(BOLD);
+  textSize(cardTitleSize + 2);
+  text("Durante o treino", rightX, rightTop);
+
+  textStyle(NORMAL);
+  textSize(cardBodySize);
+  textLeading(cardBodySize * 1.6);
+  text(
+    "Observa o exercicio mostrado no ecra e imita o movimento com calma. O contador e a mensagem de feedback ajudam-te a perceber se estas a completar a repeticao corretamente.",
+    rightX,
+    rightTop + 38,
+    rightColumnWidth - 44,
+    116
+  );
+
+  fill(255, 209, 102);
+  textStyle(BOLD);
+  textSize(cardTitleSize + 2);
+  text("Exploracao livre", rightX, rightTop + 166);
 
   fill(235, 244, 255);
   textStyle(NORMAL);
-  textSize(bodyTextSize);
-  textLeading(bodyTextSize * 1.6);
+  textSize(cardBodySize);
   text(
-    "1. Escolhe a zona do corpo que queres treinar.\n\n2. Observa o movimento pedido e imita-o diante da camara.\n\n3. Completa as repeticoes ao teu ritmo e acompanha o feedback no ecra.\n\n4. Usa o botao Fechar no jogo sempre que quiseres voltar ao menu.",
-    0,
-    panelTop + 138,
-    panelWidth - 110,
-    panelHeight - 240
+    "Se quiseres testar zonas especificas do corpo, abre CALIBRACAO e escolhe diretamente ombros, membros superiores, cintura ou membros inferiores.",
+    rightX,
+    rightTop + 204,
+    rightColumnWidth - 44,
+    108
   );
 
   fill(255, 209, 102);
   textSize(hintTextSize);
-  textLeading(hintTextSize * 1.45);
+  textStyle(BOLD);
+  textLeading(hintTextSize * 1.5);
+  textAlign(LEFT, TOP);
   text(
-    "Dica: coloca-te centrado e com espaco suficiente para mexer os bracos e pernas.",
-    0,
-    panelTop + panelHeight - 126,
-    panelWidth - 120,
-    58
+    "Dica: coloca-te centrado, com boa luz e com espaco suficiente para mexer bracos, tronco e pernas.",
+    rightX,
+    panelTop + panelHeight - 138,
+    rightColumnWidth - 44,
+    64
   );
 
-  drawMenuButton("VOLTAR", 0, panelTop + panelHeight - 56, min(190, panelWidth * 0.38), {
+  drawMenuButton("VOLTAR", backButton.x, backButton.y, backButton.w, {
     base: color(44, 115, 255, 210),
     glow: color(115, 217, 255, 90)
   });
+  pop();
+}
+
+function getManualBackButtonBounds() {
+  const panelWidth = min(width * 0.92, 980);
+  const panelHeight = min(height * 0.76, 620);
+  const panelTop = -panelHeight / 2;
+
+  return {
+    x: 0,
+    y: panelTop + panelHeight - 58,
+    w: min(230, panelWidth * 0.24),
+    h: width < 720 ? 50 : 56
+  };
+}
+
+function drawManualStepCard(x, y, w, h, title, copy) {
+  push();
+  rectMode(CORNER);
+  noStroke();
+  fill(255, 255, 255, 0);
+  fill(12, 31, 49, 220);
+  rect(x, y, w, h, 22);
+  stroke(115, 217, 255, 65);
+  strokeWeight(1.2);
+  noFill();
+  rect(x, y, w, h, 22);
+
+  noStroke();
+  fill(255, 209, 102);
+  textAlign(LEFT, TOP);
+  textStyle(BOLD);
+  textSize(width < 720 ? 14 : 17);
+  text(title, x + 18, y + 14);
+
+  fill(235, 244, 255);
+  textStyle(NORMAL);
+  textSize(width < 720 ? 11 : 14);
+  textLeading((width < 720 ? 11 : 14) * 1.45);
+  text(copy, x + 18, y + 40, w - 36, h - 48);
   pop();
 }
 
@@ -387,28 +471,6 @@ function menuMousePressed() {
       return;
     }
 
-    const trainingSummary = window.getTrainingSummary ? window.getTrainingSummary() : null;
-    if (trainingSummary && (trainingSummary.totalAssignments || 0) > 1) {
-      const selectorBounds = getTrainingSelectorBounds();
-      const panelOffsetY = -height * 0.21;
-
-      if (
-        abs(mx - selectorBounds.left.x) < selectorBounds.left.w / 2 &&
-        abs(my - (panelOffsetY + selectorBounds.left.y)) < selectorBounds.left.h / 2
-      ) {
-        if (window.cycleTrainingSelection) window.cycleTrainingSelection(-1);
-        return;
-      }
-
-      if (
-        abs(mx - selectorBounds.right.x) < selectorBounds.right.w / 2 &&
-        abs(my - (panelOffsetY + selectorBounds.right.y)) < selectorBounds.right.h / 2
-      ) {
-        if (window.cycleTrainingSelection) window.cycleTrainingSelection(1);
-        return;
-      }
-    }
-
     if (abs(mx) < btnW / 2 && abs(my - (-50)) < btnH / 2) {
       if (window.requireAuth && !window.requireAuth('Tens de entrar antes de jogar.')) return;
       if (window.startAssignedTraining) {
@@ -430,6 +492,12 @@ function menuMousePressed() {
     if (abs(mx) < 90 && abs(my - (height * 0.35)) < btnH / 2) state = "MENU";
   }
   else if (state === "MANUAL") {
-    if (abs(mx) < 90 && abs(my - 180) < btnH / 2) state = "MENU";
+    const backButton = getManualBackButtonBounds();
+    if (
+      abs(mx - backButton.x) < backButton.w / 2 &&
+      abs(my - backButton.y) < backButton.h / 2
+    ) {
+      state = "MENU";
+    }
   }
 }
