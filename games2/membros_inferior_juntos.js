@@ -58,6 +58,7 @@ function checkGymLogicGeral(pose) {
     } else if (exercisePhaseGeral === "UP" && isDown) {
       exercisePhaseGeral = "DOWN";
       ex.currentReps++;
+      if (window.playRepSuccessSound) window.playRepSuccessSound();
       feedbackMsgGeral = "MUITO BEM! CONTINUA.";
 
       if (ex.currentReps >= ex.goalReps) {

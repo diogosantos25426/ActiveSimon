@@ -56,6 +56,7 @@ function checkGymLogicEsq(pose) {
     } else if (exercisePhaseEsq === "UP" && isDown) {
       exercisePhaseEsq = "DOWN";
       ex.currentReps++;
+      if (window.playRepSuccessSound) window.playRepSuccessSound();
       feedbackMsgEsq = "BOA! CONTINUA...";
 
       if (ex.currentReps >= ex.goalReps) {

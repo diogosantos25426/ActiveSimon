@@ -63,6 +63,7 @@ function checkSupGeralLogic(pose) {
     } else if (phaseSupG === "UP" && isDown) {
       phaseSupG = "DOWN";
       ex.currentReps++;
+      if (window.playRepSuccessSound) window.playRepSuccessSound();
       feedbackSupG = "EXCELENTE COORDENACAO!";
 
       if (ex.currentReps >= ex.goalReps) {

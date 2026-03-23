@@ -85,6 +85,7 @@ function checkOmbroDirLogic(pose) {
     else if (exercisePhaseOmbro === "UP" && isDown) {
       exercisePhaseOmbro = "DOWN";
       ex.currentReps++;
+      if (window.playRepSuccessSound) window.playRepSuccessSound();
       feedbackMsgOmbro = "BOA! MAIS UMA.";
       
       if (ex.currentReps >= ex.goalReps) {

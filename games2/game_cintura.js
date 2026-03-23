@@ -55,6 +55,7 @@ function checkCinturaLogic(pose) {
       } else if ((exercisePhaseCintura === "RIGHT" && shoulderDiff < -30) || (exercisePhaseCintura === "LEFT" && shoulderDiff > 30)) {
         exercisePhaseCintura = "CENTER";
         ex.currentReps++;
+        if (window.playRepSuccessSound) window.playRepSuccessSound();
         feedbackMsgCintura = "EXCELENTE! MAIS UMA.";
       }
     } else if (ex.label === "ROTACAO DE TRONCO") {
@@ -69,6 +70,7 @@ function checkCinturaLogic(pose) {
       } else if (currentShoulderWidth > hipWidth * 0.9 && exercisePhaseCintura === "ROTATED") {
         exercisePhaseCintura = "CENTER";
         ex.currentReps++;
+        if (window.playRepSuccessSound) window.playRepSuccessSound();
         feedbackMsgCintura = "BOA ROTACAO!";
       }
     } else if (ex.label === "ALONGAMENTO VERTICAL") {
@@ -81,6 +83,7 @@ function checkCinturaLogic(pose) {
       } else if (wR.y < midShoulderY - 100 && exercisePhaseCintura === "DOWN") {
         exercisePhaseCintura = "UP";
         ex.currentReps++;
+        if (window.playRepSuccessSound) window.playRepSuccessSound();
         feedbackMsgCintura = "ISSO! DESCE OUTRA VEZ.";
         exercisePhaseCintura = "CENTER";
       }

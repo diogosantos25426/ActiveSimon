@@ -62,6 +62,7 @@ function checkSupEsqLogic(pose) {
     } else if (exercisePhaseSupEsq === "UP" && isDown) {
       exercisePhaseSupEsq = "DOWN";
       ex.currentReps++;
+      if (window.playRepSuccessSound) window.playRepSuccessSound();
       feedbackMsgSupEsq = "BOA! CONTINUA ASSIM.";
 
       if (ex.currentReps >= ex.goalReps) {

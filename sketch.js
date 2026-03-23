@@ -1,6 +1,7 @@
 let bodyPose, video, poses = [], connections;
 let myFont;
 let basketImg;
+let repSuccessSound;
 let gameCloseButton;
 let sessionPillElement;
 let supervisorLaunchElement;
@@ -23,10 +24,21 @@ function preload() {
   bodyPose = ml5.bodyPose("BlazePose");
   myFont = loadFont('https://cdnjs.cloudflare.com/ajax/libs/topcoat/0.8.0/font/SourceCodePro-Bold.otf');
   basketImg = loadImage('assets/Cesto.png');
+  repSuccessSound = loadSound('assets/sounds/1.mp3');
   if (window.preloadGames2Modules) {
     window.preloadGames2Modules();
   }
   preloadMenu();
+}
+
+function playRepSuccessSound() {
+  if (!repSuccessSound) return;
+
+  if (repSuccessSound.isPlaying()) {
+    repSuccessSound.stop();
+  }
+
+  repSuccessSound.play();
 }
 
 function setup() {
@@ -107,6 +119,7 @@ function mousePressed() {
 }
 
 function drawSkeleton(pose) {
+  if (window.shouldDrawPoseOverlay === false) return;
   if (!pose || !connections) return;
 
   push();
@@ -141,3 +154,5 @@ function drawSkeleton(pose) {
   }
   pop();
 }
+
+window.playRepSuccessSound = playRepSuccessSound;

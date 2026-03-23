@@ -61,6 +61,7 @@ function checkSupDirLogic(pose) {
     } else if (exercisePhaseSup === "UP" && isDown) {
       exercisePhaseSup = "DOWN";
       ex.currentReps++;
+      if (window.playRepSuccessSound) window.playRepSuccessSound();
       feedbackMsgSup = "MUITO BEM! MAIS UMA.";
 
       if (ex.currentReps >= ex.goalReps) {

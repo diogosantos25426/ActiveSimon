@@ -63,6 +63,7 @@ function checkOmbrosGeralLogic(pose) {
     } else if (exercisePhaseGeral === "UP" && isDown) {
       exercisePhaseGeral = "DOWN";
       ex.currentReps++;
+      if (window.playRepSuccessSound) window.playRepSuccessSound();
       feedbackMsgGeral = "BOA POSTURA! CONTINUA.";
 
       if (ex.currentReps >= ex.goalReps) {

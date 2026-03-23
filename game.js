@@ -286,6 +286,7 @@ setGameCloseButtonVisible(false);
 window.drawMirrorVideo = drawMirrorVideo;
 window.drawTherapyExerciseOverlay = drawTherapyExerciseOverlay;
 window.shouldDrawGameDebug = false;
+window.shouldDrawPoseOverlay = false;
 window.exitActiveGame = exitActiveGame;
 window.registerGameImplementation = registerGameImplementation;
 window.hasGameImplementation = hasGameImplementation;

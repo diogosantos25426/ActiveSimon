@@ -82,6 +82,7 @@ function checkOmbroEsqLogic(pose) {
     else if (exercisePhaseOmbroEsq === "UP" && isDown) {
       exercisePhaseOmbroEsq = "DOWN";
       ex.currentReps++;
+      if (window.playRepSuccessSound) window.playRepSuccessSound();
       feedbackMsgOmbroEsq = "MAIS UMA!";
       
       if (ex.currentReps >= ex.goalReps) {
