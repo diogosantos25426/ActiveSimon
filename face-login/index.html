@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Face Login Supabase</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+    <script src="https://unpkg.com/ml5@0.6.0/dist/ml5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-night: #07111f;
+            --bg-deep: #0d2234;
+            --panel: rgba(10, 20, 34, 0.92);
+            --line: rgba(115, 217, 255, 0.18);
+            --mint: #77f2c5;
+            --cyan: #73d9ff;
+            --gold: #ffd166;
+            --soft: rgba(235, 244, 255, 0.76);
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 16px;
+            box-sizing: border-box;
+            background:
+                radial-gradient(circle at 18% 18%, rgba(115, 217, 255, 0.14), transparent 24%),
+                radial-gradient(circle at 84% 16%, rgba(255, 209, 102, 0.12), transparent 22%),
+                linear-gradient(180deg, var(--bg-deep), var(--bg-night));
+            color: white;
+            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+            text-align: center;
+        }
+
+        .page-shell {
+            width: min(1140px, 100%);
+            margin: 0 auto;
+        }
+
+        .hero {
+            margin-bottom: 12px;
+        }
+
+        .hero-tag {
+            display: inline-block;
+            margin-bottom: 8px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(115, 217, 255, 0.08);
+            border: 1px solid rgba(115, 217, 255, 0.16);
+            color: var(--cyan);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 0 0 6px;
+            font-size: clamp(28px, 4.6vw, 46px);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #f8fbff;
+            text-shadow: 0 0 22px rgba(115, 217, 255, 0.16);
+        }
+
+        .hero-copy {
+            width: min(760px, 100%);
+            margin: 0 auto;
+            color: var(--soft);
+            line-height: 1.45;
+            font-size: 14px;
+        }
+
+        #status {
+            width: fit-content;
+            margin: 10px auto 0;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--line);
+            color: #f4fbff;
+            font-weight: 700;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(300px, 390px) minmax(300px, 1fr);
+            gap: 16px;
+            align-items: stretch;
+            margin-top: 14px;
+        }
+
+        .controls {
+            text-align: left;
+            background: var(--panel);
+            padding: 18px;
+            border-radius: 22px;
+            border: 1px solid var(--line);
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+            box-sizing: border-box;
+        }
+
+        .panel-title {
+            margin: 0 0 6px;
+            font-size: 21px;
+            color: #f4fbff;
+        }
+
+        .panel-copy {
+            margin: 0 0 12px;
+            color: var(--soft);
+            line-height: 1.4;
+            font-size: 12px;
+        }
+
+        .flow-list {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            margin: 0 0 12px;
+        }
+
+        .flow-item {
+            display: grid;
+            grid-template-columns: 26px 1fr;
+            gap: 8px;
+            align-items: start;
+            padding: 9px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.035);
+            border: 1px solid rgba(115, 217, 255, 0.08);
+        }
+
+        .flow-item strong {
+            display: block;
+            margin-bottom: 2px;
+            font-size: 12px;
+            color: #f4fbff;
+        }
+
+        .flow-item span {
+            display: block;
+            font-size: 11px;
+            line-height: 1.3;
+            color: var(--soft);
+        }
+
+        .flow-num {
+            display: grid;
+            place-items: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, rgba(119, 242, 197, 0.24), rgba(115, 217, 255, 0.18));
+            color: #fff;
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .field-group {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .field-label {
+            display: grid;
+            gap: 5px;
+            font-size: 12px;
+            font-weight: 700;
+            color: rgba(240, 248, 255, 0.88);
+        }
+
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 11px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(115, 217, 255, 0.14);
+            background: rgba(255, 255, 255, 0.06);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: rgba(119, 242, 197, 0.5);
+            box-shadow: 0 0 0 3px rgba(119, 242, 197, 0.16);
+        }
+
+        .button-grid {
+            display: grid;
+            gap: 8px;
+        }
+
+        button {
+            width: 100%;
+            padding: 11px 12px;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            font-weight: 900;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: transform 160ms ease, box-shadow 160ms ease;
+            font-size: 12px;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, var(--mint), #48c7ff);
+            color: #072116;
+            box-shadow: 0 16px 30px rgba(72, 199, 255, 0.18);
+        }
+
+        .secondary-btn {
+            background: linear-gradient(135deg, #4361ee, #6c63ff);
+            color: white;
+        }
+
+        .accent-btn {
+            background: linear-gradient(135deg, #ffd166, #ff9f1c);
+            color: #261400;
+        }
+
+        .ghost-btn {
+            background: rgba(255, 255, 255, 0.06);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        #sessionBox {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(119, 242, 197, 0.16);
+            font-size: 12px;
+            font-weight: 700;
+            color: #e7f8ff;
+        }
+
+        #helperText {
+            margin-top: 10px;
+            font-size: 11px;
+            line-height: 1.4;
+            color: rgba(235, 244, 255, 0.68);
+        }
+
+        #canvas-wrapper {
+            position: relative;
+            margin: 0 auto;
+            width: 100%;
+            max-width: 672px;
+            border: 1px solid rgba(115, 217, 255, 0.18);
+            background: rgba(3, 10, 18, 0.62);
+            border-radius: 24px;
+            padding: 12px;
+            box-sizing: border-box;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+            overflow: hidden;
+        }
+
+        #canvas-wrapper::before {
+            content: "Camera e leitura facial";
+            position: absolute;
+            top: 16px;
+            left: 18px;
+            z-index: 2;
+            padding: 7px 9px;
+            border-radius: 999px;
+            background: rgba(7, 18, 31, 0.78);
+            border: 1px solid rgba(115, 217, 255, 0.14);
+            color: var(--cyan);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        canvas {
+            display: block;
+            width: 100% !important;
+            height: auto !important;
+            max-width: 640px;
+            border-radius: 18px;
+            overflow: hidden;
+        }
+
+        @media (max-width: 980px) {
+            .layout {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .controls {
+                order: 2;
+                padding: 16px;
+            }
+
+            #canvas-wrapper {
+                order: 1;
+            }
+
+            .flow-list {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+        }
+
+        @media (max-width: 720px) {
+            body {
+                padding: 10px;
+            }
+
+            .hero {
+                margin-bottom: 8px;
+            }
+
+            .hero-copy {
+                font-size: 12px;
+            }
+
+            #status {
+                width: auto;
+                max-width: 100%;
+                font-size: 12px;
+            }
+
+            .controls {
+                padding: 14px 12px;
+                border-radius: 18px;
+            }
+
+            .panel-title {
+                font-size: 18px;
+            }
+
+            #canvas-wrapper {
+                padding: 10px;
+                border-radius: 18px;
+            }
+
+            #canvas-wrapper::before {
+                top: 10px;
+                left: 10px;
+                font-size: 10px;
+                padding: 6px 8px;
+            }
+
+            canvas {
+                border-radius: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-shell">
+        <div class="hero">
+            <div class="hero-tag">Acesso Facial</div>
+            <h1>Entrada do Jogador</h1>
+            <p class="hero-copy">Cria a conta facial, entra com rosto e associa supervisor apenas quando precisares.</p>
+            <p id="status">A carregar IA...</p>
+        </div>
+
+        <div class="layout">
+            <div class="controls">
+                <h2 class="panel-title">Registo e login</h2>
+                <p class="panel-copy">Registo, entrada e associacao em passos separados.</p>
+
+                <div class="flow-list">
+                    <div class="flow-item">
+                        <div class="flow-num">1</div>
+                        <div>
+                            <strong>Criar</strong>
+                            <span>Guardar rosto.</span>
+                        </div>
+                    </div>
+                    <div class="flow-item">
+                        <div class="flow-num">2</div>
+                        <div>
+                            <strong>Entrar</strong>
+                            <span>Ler o rosto.</span>
+                        </div>
+                    </div>
+                    <div class="flow-item">
+                        <div class="flow-num">3</div>
+                        <div>
+                            <strong>Associar</strong>
+                            <span>PIN do supervisor.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="nameInput">
+                        Nome do jogador
+                        <input type="text" id="nameInput" placeholder="Ex.: Marta Silva">
+                    </label>
+                    <label class="field-label" for="supervisorPinInput">
+                        PIN do supervisor
+                        <input type="password" id="supervisorPinInput" placeholder="Usado apenas para associacao">
+                    </label>
+                </div>
+
+                <div class="button-grid">
+                    <button class="primary-btn" onclick="createAccount()">Criar conta facial</button>
+                    <button class="secondary-btn" onclick="loginWithFace()">Entrar com rosto</button>
+                    <button class="accent-btn" onclick="linkSupervisor()">Associar supervisor</button>
+                    <button class="ghost-btn" onclick="logout()">Sair</button>
+                </div>
+
+                <div id="sessionBox">Sem sessao ativa.</div>
+                <div id="helperText">O PIN e opcional e so serve para associar supervisor depois da conta existir.</div>
+            </div>
+
+            <div id="canvas-wrapper"></div>
+        </div>
+    </div>
+
+    <script>
+        const SB_URL = 'https://ocacphcysttwekdhjpwn.supabase.co';
+        const SB_KEY = 'sb_publishable_yMtsceFTxXu5CMaUDd6T4g_W6x_PqDd';
+        const PROFILE_SETUP_HINT = 'Prepara primeiro a base de dados com o ficheiro supabase/supervisor_auth_schema.sql.';
+        const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
+        const SESSION_KEY = 'face_logged_user';
+        const REGISTER_SAMPLES = 6;
+        const REGISTER_SAMPLE_DELAY_MS = 180;
+        const LOGIN_SAMPLES = 6;
+        const LOGIN_SAMPLE_DELAY_MS = 140;
+        const LOGIN_MAX_DISTANCE = 0.42;
+        const LOGIN_MIN_GAP = 0.06;
+        const LOGIN_CONFIRM_DELAY_MS = 700;
+        const REQUIRED_MOVEMENT_PX = 18;
+        const MOVEMENT_WINDOW_MS = 2200;
+        let faceapi, video, detections = [];
+        let currentUser = null;
+
+        function getQueryParam(name) {
+            return new URLSearchParams(window.location.search).get(name);
+        }
+
+        function maybeReturnToApp() {
+            const returnTo = getQueryParam('returnTo');
+            if (returnTo) {
+                window.location.href = returnTo;
+            }
+        }
+
+        function applyModeHint() {
+            const mode = getQueryParam('mode');
+            if (mode === 'register') {
+                document.getElementById('status').innerText = 'Modo registo facial ativo';
+                document.getElementById('nameInput').focus();
+            } else if (mode === 'login') {
+                document.getElementById('status').innerText = 'Modo login facial ativo';
+            }
+        }
+
+        function setup() {
+            const canvas = createCanvas(640, 480);
+            canvas.parent('canvas-wrapper');
+            video = createCapture(VIDEO);
+            video.size(640, 480);
+            video.hide();
+
+            loadSession();
+            renderSession();
+            applyModeHint();
+
+            const options = { withLandmarks: true, withDescriptors: true, minConfidence: 0.5 };
+            faceapi = ml5.faceApi(video, options, () => {
+                if (!getQueryParam('mode')) {
+                    document.getElementById('status').innerText = 'IA pronta';
+                }
+                startDetections();
+            });
+        }
+
+        function startDetections() {
+            faceapi.detect((err, res) => {
+                if (err) {
+                    console.error(err);
+                    setTimeout(startDetections, 120);
+                    return;
+                }
+                detections = res || [];
+                startDetections();
+            });
+        }
+
+        function draw() {
+            push();
+            translate(width, 0);
+            scale(-1, 1);
+            image(video, 0, 0);
+            pop();
+            if (detections.length > 0) {
+                const b = detections[0].alignedRect._box;
+                noFill();
+                stroke(62, 207, 142);
+                strokeWeight(3);
+                const mirroredX = width - b._x - b._width;
+                rect(mirroredX, b._y, b._width, b._height);
+            }
+        }
+
+        async function waitForFace(maxWaitMs = 4000) {
+            const start = Date.now();
+            while (Date.now() - start < maxWaitMs) {
+                if (detections.length > 0 && detections[0].descriptor) {
+                    return Array.from(detections[0].descriptor);
+                }
+                await sleep(100);
+            }
+            return null;
+        }
+
+        async function waitForFaceMovement(requiredPx = REQUIRED_MOVEMENT_PX, maxWaitMs = MOVEMENT_WINDOW_MS) {
+            const start = Date.now();
+            let minX = Number.POSITIVE_INFINITY;
+            let maxX = Number.NEGATIVE_INFINITY;
+            let minY = Number.POSITIVE_INFINITY;
+            let maxY = Number.NEGATIVE_INFINITY;
+
+            while (Date.now() - start < maxWaitMs) {
+                if (detections.length > 0) {
+                    const b = detections[0].alignedRect && detections[0].alignedRect._box;
+                    if (b) {
+                        const cx = b._x + (b._width / 2);
+                        const cy = b._y + (b._height / 2);
+                        minX = Math.min(minX, cx);
+                        maxX = Math.max(maxX, cx);
+                        minY = Math.min(minY, cy);
+                        maxY = Math.max(maxY, cy);
+                        const movement = Math.max(maxX - minX, maxY - minY);
+                        if (movement >= requiredPx) return true;
+                    }
+                }
+                await sleep(100);
+            }
+            return false;
+        }
+
+        function sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        function averageDescriptors(samples) {
+            const size = samples[0].length;
+            const acc = new Array(size).fill(0);
+            for (const sample of samples) {
+                for (let i = 0; i < size; i++) acc[i] += sample[i];
+            }
+            return acc.map((v) => v / samples.length);
+        }
+
+        async function captureAverageDescriptor(sampleCount, delayMs) {
+            const samples = [];
+            for (let i = 0; i < sampleCount; i++) {
+                const desc = await waitForFace(4000);
+                if (!desc) {
+                    alert('Nenhum rosto visivel. Mantem a cara centrada e tenta novamente.');
+                    return null;
+                }
+                samples.push(desc);
+                if (i < sampleCount - 1) await sleep(delayMs);
+            }
+            return averageDescriptors(samples);
+        }
+
+        function parseEmbedding(value) {
+            if (Array.isArray(value)) return value.map(Number);
+            if (typeof value === 'string') {
+                try {
+                    const parsed = JSON.parse(value);
+                    if (Array.isArray(parsed)) return parsed.map(Number);
+                } catch (_) {
+                    const cleaned = value.replace('[', '').replace(']', '').trim();
+                    if (!cleaned) return [];
+                    return cleaned.split(',').map((n) => Number(n.trim()));
+                }
+            }
+            return [];
+        }
+
+        function euclideanDistance(a, b) {
+            if (!a || !b || a.length !== b.length || a.length === 0) return Number.POSITIVE_INFINITY;
+            let sum = 0;
+            for (let i = 0; i < a.length; i++) {
+                const d = a[i] - b[i];
+                sum += d * d;
+            }
+            return Math.sqrt(sum);
+        }
+
+        async function getProfiles() {
+            let data;
+            let error;
+            ({ data, error } = await supabaseClient
+                .from('face_profiles')
+                .select('id, name, face_embedding, embeddings, supervisor_id, supervisors(name)'));
+            if (error) {
+                ({ data, error } = await supabaseClient
+                    .from('face_profiles')
+                    .select('id, name, face_embedding, embeddings, supervisor_id'));
+            }
+            if (error) {
+                ({ data, error } = await supabaseClient
+                    .from('face_profiles')
+                    .select('id, name, face_embedding, embeddings'));
+            }
+            if (error) throw error;
+
+            return (data || []).map((p) => {
+                const allEmbeddings = [];
+
+                const primary = parseEmbedding(p.face_embedding);
+                if (primary.length === 128) allEmbeddings.push(primary);
+
+                if (p.embeddings) {
+                    let extra = p.embeddings;
+                    if (typeof extra === 'string') {
+                        try {
+                            extra = JSON.parse(extra);
+                        } catch (_) {}
+                    }
+
+                    if (Array.isArray(extra)) {
+                        for (const item of extra) {
+                            const emb = parseEmbedding(item);
+                            if (emb.length === 128) allEmbeddings.push(emb);
+                        }
+                    }
+                }
+
+                return {
+                    id: p.id,
+                    name: p.name,
+                    supervisor_id: p.supervisor_id || null,
+                    supervisor_name: p.supervisors && p.supervisors.name ? p.supervisors.name : null,
+                    embeddings: allEmbeddings
+                };
+            }).filter((p) => p.embeddings.length > 0);
+        }
+
+        function findTopMatches(profiles, descriptor) {
+            return profiles
+                .map((p) => {
+                    let best = Number.POSITIVE_INFINITY;
+                    for (const emb of p.embeddings) {
+                        const d = euclideanDistance(descriptor, emb);
+                        if (d < best) best = d;
+                    }
+                    return { ...p, distance: best };
+                })
+                .sort((a, b) => a.distance - b.distance);
+        }
+
+        async function loginByEdgeFunction(descriptor) {
+            const { data, error } = await supabaseClient.functions.invoke('face-login', {
+                body: {
+                    descriptor,
+                    maxDistance: LOGIN_MAX_DISTANCE,
+                    minGap: LOGIN_MIN_GAP
+                }
+            });
+
+            if (error) return { ok: false, available: false, error: error.message };
+            if (!data || !data.user) return { ok: false, available: true, reason: 'Sem match da funcao edge.' };
+
+            const user = data.user;
+            if (!user.name) return { ok: false, available: true, reason: 'Resposta invalida da funcao edge.' };
+            return {
+                ok: true,
+                available: true,
+                top: {
+                    id: user.id || null,
+                    name: user.name,
+                    supervisor_id: user.supervisor_id || null,
+                    supervisor_name: user.supervisor_name || null,
+                    distance: Number(data.distance ?? 0)
+                }
+            };
+        }
+
+        function validateTopMatch(matches, maxDistance, minGap) {
+            if (!matches || matches.length === 0) return { ok: false, reason: 'Sem perfis para comparar.' };
+            const top = matches[0];
+            if (!Number.isFinite(top.distance)) return { ok: false, reason: 'Embedding invalido na base de dados.' };
+            if (top.distance > maxDistance) {
+                return { ok: false, reason: `Distancia demasiado alta (${top.distance.toFixed(3)} > ${maxDistance.toFixed(3)})` };
+            }
+            if (matches.length > 1) {
+                const gap = matches[1].distance - top.distance;
+                if (gap < minGap) {
+                    return { ok: false, reason: `Match ambiguo (gap ${gap.toFixed(3)} < ${minGap.toFixed(3)})` };
+                }
+            }
+            return { ok: true, top };
+        }
+
+        function getDistanceDebug(matches) {
+            return matches
+                .slice(0, 3)
+                .map((m, i) => `${i + 1}:${m.name || 'sem_nome'}=d${m.distance.toFixed(3)}`)
+                .join(' | ');
+        }
+
+        function loadSession() {
+            const saved = localStorage.getItem(SESSION_KEY);
+            currentUser = saved ? JSON.parse(saved) : null;
+        }
+
+        function saveSession(user) {
+            currentUser = user;
+            localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+            renderSession();
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem(SESSION_KEY);
+            renderSession();
+            alert('Sessao terminada.');
+        }
+
+        function renderSession() {
+            const box = document.getElementById('sessionBox');
+            box.innerText = currentUser
+                ? `Sessao ativa: ${currentUser.name}`
+                : 'Sem sessao ativa.';
+        }
+
+        function explainSchemaError(error) {
+            const message = error && error.message ? error.message : '';
+            if (/does not exist|schema cache|Could not find the table|relation .* does not exist/i.test(message)) {
+                return PROFILE_SETUP_HINT;
+            }
+            return message || 'Ocorreu um erro inesperado.';
+        }
+
+        async function validateSupervisorPin(pin) {
+            const { data, error } = await supabaseClient.rpc('validate_supervisor_pin', {
+                pin_input: pin
+            });
+
+            if (error) throw new Error(explainSchemaError(error));
+
+            const supervisor = Array.isArray(data) ? data[0] : data;
+            if (!supervisor || !supervisor.supervisor_id) {
+                throw new Error('PIN de supervisor invalido.');
+            }
+
+            return supervisor;
+        }
+
+        async function createAccount() {
+            const name = document.getElementById('nameInput').value.trim();
+            if (!name) return alert('Escreve o nome de utilizador.');
+
+            document.getElementById('status').innerText = 'A capturar amostras para criar conta...';
+            const desc = await captureAverageDescriptor(REGISTER_SAMPLES, REGISTER_SAMPLE_DELAY_MS);
+            document.getElementById('status').innerText = 'IA pronta';
+            if (!desc) return;
+            const descriptors = [];
+            for (let i = 0; i < REGISTER_SAMPLES; i++) {
+                const one = await waitForFace(2500);
+                if (!one) break;
+                descriptors.push(one);
+                await sleep(80);
+            }
+            if (descriptors.length === 0) descriptors.push(desc);
+
+            const { data: existing, error: existingError } = await supabaseClient
+                .from('face_profiles')
+                .select('id')
+                .eq('name', name)
+                .limit(1);
+
+            if (existingError) return alert('Erro ao validar nome: ' + existingError.message);
+            if (existing && existing.length > 0) return alert('Esse nome ja existe. Usa outro.');
+
+            let created;
+            let error;
+            ({ data: created, error } = await supabaseClient
+                .from('face_profiles')
+                .insert([{
+                    name,
+                    face_embedding: desc,
+                    embeddings: descriptors
+                }])
+                .select('id, name')
+                .single());
+            if (error) {
+                ({ data: created, error } = await supabaseClient
+                    .from('face_profiles')
+                    .insert([{ name, face_embedding: desc }])
+                    .select('id, name')
+                    .single());
+            }
+            if (error) return alert('Erro ao criar conta: ' + error.message);
+
+            saveSession({
+                id: created.id || null,
+                name: created.name,
+                supervisor_id: null,
+                supervisor_name: null
+            });
+            alert('Conta criada e sessao iniciada para: ' + name);
+            maybeReturnToApp();
+        }
+
+        async function linkSupervisor() {
+            const supervisorPin = document.getElementById('supervisorPinInput').value.trim();
+            if (!currentUser || !currentUser.id) {
+                return alert('Primeiro cria conta ou inicia sessao com rosto.');
+            }
+            if (!supervisorPin) {
+                return alert('Insere o PIN do supervisor para fazer a associacao.');
+            }
+
+            let supervisor;
+            try {
+                supervisor = await validateSupervisorPin(supervisorPin);
+            } catch (err) {
+                return alert('Erro ao validar PIN: ' + err.message);
+            }
+
+            const { data, error } = await supabaseClient
+                .from('face_profiles')
+                .update({ supervisor_id: supervisor.supervisor_id })
+                .eq('id', currentUser.id)
+                .select('id, name, supervisor_id')
+                .single();
+
+            if (error) return alert('Erro ao associar supervisor: ' + explainSchemaError(error));
+
+            saveSession({
+                id: data.id || currentUser.id,
+                name: data.name || currentUser.name,
+                supervisor_id: supervisor.supervisor_id,
+                supervisor_name: supervisor.supervisor_name || null
+            });
+            alert('Supervisor associado com sucesso.');
+            maybeReturnToApp();
+        }
+
+        async function loginWithFace() {
+            document.getElementById('status').innerText = 'Anti-spoof: move ligeiramente a cabeca...';
+            const moved = await waitForFaceMovement();
+            if (!moved) {
+                document.getElementById('status').innerText = 'IA pronta';
+                return alert('Login recusado: sem movimento suficiente. Move ligeiramente a cabeca e tenta novamente.');
+            }
+
+            document.getElementById('status').innerText = 'A capturar login (1/2)...';
+            const desc = await captureAverageDescriptor(LOGIN_SAMPLES, LOGIN_SAMPLE_DELAY_MS);
+            if (!desc) return;
+
+            let profiles;
+            try {
+                profiles = await getProfiles();
+            } catch (err) {
+                return alert('Erro ao ler perfis: ' + err.message);
+            }
+            let firstCheck;
+            const edgeTry = await loginByEdgeFunction(desc);
+            if (edgeTry.ok) {
+                firstCheck = edgeTry;
+            } else {
+                const firstMatches = findTopMatches(profiles, desc);
+                firstCheck = validateTopMatch(firstMatches, LOGIN_MAX_DISTANCE, LOGIN_MIN_GAP);
+                if (!firstCheck.ok) return alert('Login recusado: ' + firstCheck.reason + '\nScores: ' + getDistanceDebug(firstMatches));
+            }
+
+            document.getElementById('status').innerText = 'A confirmar identidade...';
+            await sleep(LOGIN_CONFIRM_DELAY_MS);
+
+            document.getElementById('status').innerText = 'A capturar login (2/2)...';
+            const desc2 = await captureAverageDescriptor(LOGIN_SAMPLES, LOGIN_SAMPLE_DELAY_MS);
+            if (!desc2) return;
+
+            const secondMatches = findTopMatches(profiles, desc2);
+            const secondCheck = validateTopMatch(secondMatches, LOGIN_MAX_DISTANCE, LOGIN_MIN_GAP);
+            if (!secondCheck.ok) return alert('Login recusado: ' + secondCheck.reason + '\nScores: ' + getDistanceDebug(secondMatches));
+
+            const firstUserKey = firstCheck.top.id ?? firstCheck.top.name;
+            const secondUserKey = secondCheck.top.id ?? secondCheck.top.name;
+            if (firstUserKey !== secondUserKey) {
+                return alert('Login recusado: identidade instavel entre capturas.');
+            }
+
+            const user = {
+                id: firstCheck.top.id || null,
+                name: firstCheck.top.name,
+                supervisor_id: firstCheck.top.supervisor_id || null,
+                supervisor_name: firstCheck.top.supervisor_name || null
+            };
+            saveSession(user);
+            document.getElementById('status').innerText = 'IA pronta';
+            alert('Login efetuado: ' + firstCheck.top.name + ' (distancia: ' + firstCheck.top.distance.toFixed(3) + ')');
+            maybeReturnToApp();
+        }
+    </script>
+</body>
+</html>
+

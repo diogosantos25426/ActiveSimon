@@ -1,340 +1,293 @@
-let targets = [
-  { id: 0, x: -0.5, y: -0.3, z: 0, color: [255, 0, 0] },
-  { id: 1, x: 0.5, y: -0.3, z: 0, color: [0, 0, 255] },
-  { id: 2, x: -0.5, y: 0.3, z: 0, color: [0, 255, 0] },
-  { id: 3, x: 0.5, y: 0.3, z: 0, color: [255, 255, 0] }
-];
+let activeGameSession = null;
+const gameImplementations = {};
 
-let sequence = [];
-let playerSequence = [];
-let step = 0;
-let lastStepTime = 0;
-let activeTargetID = -1;
-let score = 0;
-let lastInputID = -1; // Para evitar múltiplos inputs no mesmo cubo
+function setGameCloseButtonVisible(visible) {
+  const button = document.getElementById("game-close-button");
+  if (!button) return;
+  button.classList.toggle("hidden", !visible);
+}
 
-// Mecânica do Cesto (dimensões actualizadas)
-let basket = { x: 0, y: 0.7, w: 0.8, h: 0.4 };
-let carriedTargetID = -1; // id do cubo que está a ser agarrado
-let handX = 0, handY = 0; // posição da mão direita (normalizada)
+function buildFallbackGameSession() {
+  const firstGame = window.getEnabledGames ? window.getEnabledGames()[0] : null;
+  return window.buildGameSessionConfig
+    ? window.buildGameSessionConfig(firstGame?.code || "lower_right", firstGame?.defaultDifficulty || "medium")
+    : {
+        gameCode: "lower_right",
+        gameName: "Membros Inferiores - Direita",
+        implementationKey: "games2_lower_right",
+        difficultyKey: "medium",
+        difficultyLabel: "Medio",
+        status: "ready",
+        bodyPart: "right_leg"
+      };
+}
 
-let handPath = []; // Guarda o rasto da mão
-let maxPathLength = 20; // Tamanho do rasto
-function gameLoop() {
-  // 1. FUNDO ESPELHADO
+function drawMirrorVideo() {
+  const sourceWidth = video?.width || 640;
+  const sourceHeight = video?.height || 480;
+  const scaleFactor = max(width / sourceWidth, height / sourceHeight);
+  const drawWidth = sourceWidth * scaleFactor;
+  const drawHeight = sourceHeight * scaleFactor;
+
   push();
   translate(0, 0, -200);
-  scale(-1, 1); 
+  scale(-1, 1);
   _renderer.GL.disable(_renderer.GL.DEPTH_TEST);
-  image(video, -width / 2, -height / 2, width, height);
+  image(video, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
   _renderer.GL.enable(_renderer.GL.DEPTH_TEST);
   pop();
+}
 
-  if (state === "SHOWING") playSequence();
+function drawTherapyExerciseOverlay({ exerciseLabel, countText, feedback, icon, accent }) {
+  const accentColor = accent || [119, 242, 197];
+  const countWidth = min(width * 0.18, 220);
+  const countHeight = 128;
+  const countX = -width / 2 + 26;
+  const countY = -height / 2 + 112;
+  const cardWidth = min(width * 0.19, 258);
+  const cardHeight = min(height * 0.44, 372);
+  const cardX = width / 2 - cardWidth - 28;
+  const cardY = -height / 2 + 110;
+  const iconSize = min(cardWidth - 34, 224);
+  const feedbackWidth = min(width * 0.4, 520);
+  const feedbackHeight = 92;
+  const feedbackX = -feedbackWidth / 2;
+  const feedbackY = height / 2 - feedbackHeight - 24;
 
-  if (poses && poses.length > 0) {
-    let pose = poses[0];
-    drawSkeleton(pose);
-    drawHandTrace(pose); // NOVO: Desenha o rasto branco
-    if (state === "PLAYER") checkCollision(pose);
-  }
-
-  // 3. DESENHO DOS CESTO + CUBOS
   push();
-  let s = min(width, height) * 0.4;
-  scale(s);
+  _renderer.GL.disable(_renderer.GL.DEPTH_TEST);
+  rectMode(CORNER);
 
-  // desenhar cesto como rect fluorescente com texto
-  push();
-  noFill();
-  stroke(255, 200, 0);
-  strokeWeight(0.02);
-  rectMode(CENTER);
-  rect(basket.x, basket.y, basket.w, basket.h, 0.1);
-  fill(255, 100);
   noStroke();
-  textSize(0.1);
-  textAlign(CENTER);
-  text("DEPOSITE AQUI", basket.x, basket.y + 0.05);
-  pop();
+  fill(4, 10, 18, 42);
+  rect(-width / 2, -height / 2, width, height);
 
-  for (let t of targets) {
-    push();
-    // Lógica de posição: se estiver agarrado, segue a mão. Se não, volta à base.
-    let dx = (t.id === carriedTargetID) ? handX : t.x;
-    let dy = (t.id === carriedTargetID) ? handY : t.y;
-    translate(dx, dy, 0);
+  fill(3, 8, 15, 120);
+  rect(-width / 2, -height / 2, 160, height);
+  rect(width / 2 - 160, -height / 2, 160, height);
 
-    let isNextCorrect = (state === "PLAYER" && sequence[playerSequence.length] === t.id);
-    let isLit = (activeTargetID === t.id || carriedTargetID === t.id || isNextCorrect);
-    
-    // Área de colisão visual
-    noFill();
-    stroke(255, 50);
-    ellipse(0, 0, 0.3);
+  fill(accentColor[0], accentColor[1], accentColor[2], 16);
+  rect(countX - 10, countY - 10, countWidth + 20, countHeight + 20, 28);
+  rect(cardX - 10, cardY - 10, cardWidth + 20, cardHeight + 20, 28);
+  rect(feedbackX - 10, feedbackY - 10, feedbackWidth + 20, feedbackHeight + 20, 999);
 
-    // Cubo
-    fill(t.color[0], t.color[1], t.color[2], isLit ? 255 : 80);
-    if (isLit) {
-      stroke(255);
-      strokeWeight(0.02);
-    } else {
-      noStroke();
-    }
-    box(0.15);
-    pop();
-  }
-  pop();
-
-  drawScore();
-}
-function drawHandTrace(pose) {
-  let h = pose.keypoints[16]; // Pulso Direito
-  if (h && h.confidence > 0.5) {
-    // Mapear coordenadas
-    let x = map(h.x, 0, 640, width / 2, -width / 2); // Já invertido para o espelho
-    let y = map(h.y, 0, 480, -height / 2, height / 2);
-    
-    // Adicionar posição atual ao rasto
-    handPath.push({x: x, y: y});
-    if (handPath.length > maxPathLength) handPath.shift();
-  }
-
-  // Desenhar o rasto
-  push();
-  translate(0, 0, -180); // À frente do vídeo
+  fill(6, 17, 30, 230);
+  rect(countX, countY, countWidth, countHeight, 26);
+  stroke(accentColor[0], accentColor[1], accentColor[2], 95);
+  strokeWeight(1.4);
   noFill();
-  stroke(255, 200); // Branco semi-transparente
-  strokeWeight(8);
-  beginShape();
-  for (let p of handPath) {
-    vertex(p.x, p.y);
-  }
-  endShape();
-  pop();
-}
+  rect(countX, countY, countWidth, countHeight, 26);
 
-function drawSkeleton(pose) {
-  push();
-  // Como o vídeo está em translate(0,0,-200), vamos desenhar o esqueleto um pouco à frente
-  translate(0, 0, -190); 
-  // Inverter o X para acompanhar o espelho do vídeo
-  scale(-1, 1); 
-
-  stroke(0, 255, 0); // Cor verde para destacar
-  strokeWeight(5);
-  
-  if (pose.keypoints && connections) {
-    for (let i = 0; i < connections.length; i++) {
-      let a = pose.keypoints[connections[i][0]];
-      let b = pose.keypoints[connections[i][1]];
-
-      // Se ambos os pontos forem detetados
-      if (a && b && a.confidence > 0.1 && b.confidence > 0.1) {
-        // Mapear as coordenadas 640x480 do vídeo para o tamanho do canvas WEBGL
-        let x1 = map(a.x, 0, 640, -width / 2, width / 2);
-        let y1 = map(a.y, 0, 480, -height / 2, height / 2);
-        let x2 = map(b.x, 0, 640, -width / 2, width / 2);
-        let y2 = map(b.y, 0, 480, -height / 2, height / 2);
-        
-        // Aplicar offsets para calibração
-        let idxA = connections[i][0];
-        let offsetXA = 0, offsetYA = 0;
-        if (idxA === 5) { offsetXA = -15; offsetYA = -15; } // ombro esquerdo para cima e esquerda
-        else if (idxA === 6) { offsetXA = 15; offsetYA = -15; } // ombro direito para direita e cima
-        else if (idxA === 7) { offsetYA = -15; } // cotovelo esquerdo para cima
-        else if (idxA === 8) { offsetYA = -15; } // cotovelo direito para cima
-        x1 += offsetXA;
-        y1 += offsetYA;
-        
-        let idxB = connections[i][1];
-        let offsetXB = 0, offsetYB = 0;
-        if (idxB === 5) { offsetXB = -15; offsetYB = -15; }
-        else if (idxB === 6) { offsetXB = 15; offsetYB = -15; }
-        else if (idxB === 7) { offsetYB = -15; }
-        else if (idxB === 8) { offsetYB = -15; }
-        x2 += offsetXB;
-        y2 += offsetYB;
-        
-        line(x1, y1, 0, x2, y2, 0);
-      }
-    }
-    
-    // Opcional: Desenhar pontos nas articulações
-    fill(255, 0, 0);
-    noStroke();
-    for (let kp of pose.keypoints) {
-      if (kp.confidence > 0.1) {
-        let x = map(kp.x, 0, 640, -width / 2, width / 2);
-        let y = map(kp.y, 0, 480, -height / 2, height / 2);
-        
-        let idx = pose.keypoints.indexOf(kp);
-        let offsetX = 0, offsetY = 0;
-        if (idx === 5) { offsetX = -15; offsetY = -15; }
-        else if (idx === 6) { offsetX = 15; offsetY = -15; }
-        else if (idx === 7) { offsetY = -15; }
-        else if (idx === 8) { offsetY = -15; }
-        x += offsetX;
-        y += offsetY;
-        
-        ellipse(x, y, 10, 10);
-      }
-    }
-  }
-  pop();
-}
-function drawScore() {
-  push();
-  // Posiciona no topo do ecrã
-  translate(0, -height / 2 + 40, 50); 
-  fill(255);
   noStroke();
+  fill(8, 21, 37, 236);
+  rect(cardX, cardY, cardWidth, cardHeight, 24);
+  stroke(accentColor[0], accentColor[1], accentColor[2], 120);
+  strokeWeight(1.5);
+  noFill();
+  rect(cardX, cardY, cardWidth, cardHeight, 24);
+
+  noStroke();
+  fill(235, 244, 255);
+  textAlign(LEFT, TOP);
+  textStyle(BOLD);
+  textSize(min(width * 0.014, 13));
+  text("EXERCICIO ATIVO", cardX + 18, cardY + 16);
+
+  fill(255, 255, 255, 248);
+  rect(cardX + 17, cardY + 42, cardWidth - 34, iconSize, 18);
+  if (icon) {
+    image(icon, cardX + 17, cardY + 42, cardWidth - 34, iconSize);
+  }
+
+  fill(accentColor[0], accentColor[1], accentColor[2]);
+  textSize(min(width * 0.017, 18));
+  textLeading(24);
+  text(exerciseLabel || "Exercicio", cardX + 18, cardY + 58 + iconSize, cardWidth - 36, 72);
+
+  noStroke();
+  fill(235, 244, 255);
+  textAlign(LEFT, TOP);
+  textSize(min(width * 0.014, 13));
+  textStyle(BOLD);
+  text("REPETICOES", countX + 18, countY + 18);
+  fill(accentColor[0], accentColor[1], accentColor[2]);
   textAlign(CENTER, CENTER);
-  textSize(30);
-  // nfc() formata o número para garantir que não aparecem decimais estranhos
-  text("PONTOS: " + score, 0, 0);
+  textSize(min(countWidth * 0.34, width * 0.04, 48));
+  text(countText || "0 / 0", countX + countWidth / 2, countY + 76);
+
+  fill(7, 20, 33, 235);
+  rect(feedbackX, feedbackY, feedbackWidth, feedbackHeight, 999);
+  stroke(accentColor[0], accentColor[1], accentColor[2], 80);
+  strokeWeight(1.2);
+  noFill();
+  rect(feedbackX, feedbackY, feedbackWidth, feedbackHeight, 999);
+
+  noStroke();
+  fill(255, 209, 102);
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+  textSize(min(width * 0.018, 19));
+  text(feedback || "Segue o movimento mostrado.", 0, feedbackY + 34);
+
+  fill(220, 235, 255);
+  textStyle(NORMAL);
+  textSize(min(width * 0.0135, 14));
+  text("Usa FECHAR para voltar ao menu.", 0, feedbackY + 62);
+
+  _renderer.GL.enable(_renderer.GL.DEPTH_TEST);
   pop();
 }
 
-// --- DESENHO DO ESQUELETO ---
+function drawGameHud() {
+  push();
+  _renderer.GL.disable(_renderer.GL.DEPTH_TEST);
 
+  rectMode(CORNER);
+  noStroke();
 
-// --- LÓGICA DE JOGO ---
-function startNewGame() {
-  score = 0;
+  const headerWidth = min(width * 0.42, 430);
+  const headerX = -width / 2 + 26;
+  const headerY = -height / 2 + 18;
+  fill(6, 18, 31, 226);
+  rect(headerX, headerY, headerWidth, 64, 20);
+  stroke(115, 217, 255, 105);
+  strokeWeight(1.2);
+  noFill();
+  rect(headerX, headerY, headerWidth, 64, 20);
+
+  noStroke();
+  fill(255, 209, 102);
+  textAlign(LEFT, CENTER);
+  textStyle(BOLD);
+  textSize(min(width * 0.023, 22));
+  text(activeGameSession?.gameName || "Treino Ativo", headerX + 18, headerY + 23);
+
+  fill(119, 242, 197);
+  textStyle(NORMAL);
+  textSize(min(width * 0.0155, 14));
+  text(`Dificuldade ${activeGameSession?.difficultyLabel || "Medio"}`, headerX + 18, headerY + 45);
+
+  _renderer.GL.enable(_renderer.GL.DEPTH_TEST);
+  pop();
+}
+
+function registerGameImplementation(implementationKey, implementation) {
+  if (!implementationKey || !implementation) return;
+  gameImplementations[implementationKey] = implementation;
+}
+
+function hasGameImplementation(implementationKey) {
+  if (!implementationKey) return false;
+  return Boolean(gameImplementations[implementationKey]);
+}
+
+function getActiveImplementation() {
+  if (!activeGameSession?.implementationKey) return null;
+  return gameImplementations[activeGameSession.implementationKey] || null;
+}
+
+function applyGameSession(gameCode, difficultyKey) {
+  activeGameSession = window.buildGameSessionConfig
+    ? window.buildGameSessionConfig(gameCode, difficultyKey)
+    : buildFallbackGameSession();
+
+  if (!activeGameSession) {
+    activeGameSession = buildFallbackGameSession();
+  }
+
+  return activeGameSession;
+}
+
+function startNewGame(gameCode, difficultyKey = "medium") {
+  const safeCode = gameCode || window.getEnabledGames?.()[0]?.code || "lower_right";
+  applyGameSession(safeCode, difficultyKey);
+
+  const implementation = getActiveImplementation();
+  if (implementation?.start) {
+    implementation.start(activeGameSession);
+  }
+
   state = "PLAYER";
-  sequence = []; // Limpa a sequência antiga
-  nextLevel();
-  // reset da interacção de agarrar
-  carriedTargetID = -1;
-  handX = handY = 0;
+  setGameCloseButtonVisible(true);
 }
 
-function nextLevel() {
-  // Adiciona um novo cubo aleatório à sequência existente
-  sequence.push(floor(random(4)));
-  
-  // Faz reset às variáveis de controlo da ronda do jogador
-  playerSequence = []; 
-  step = 0;
-  lastInputID = -1;
-  activeTargetID = -1;
-  carriedTargetID = -1; // Garante que não começa a carregar nada
-  
-  // Muda para o estado de exibição para mostrar a nova sequência ao jogador
-  state = "SHOWING";
-  lastStepTime = millis();
-}
-
-function playSequence() {
-  let speed = max(1000 - (sequence.length * 50), 400);
-  if (millis() - lastStepTime > speed) {
-    if (step < sequence.length) {
-      if (activeTargetID === -1) {
-        activeTargetID = sequence[step];
-      } else {
-        activeTargetID = -1;
-        step++;
-      }
-      lastStepTime = millis();
-    } else {
-      activeTargetID = -1;
-      state = "PLAYER";
-    }
-  }}
-
-function checkCollision(pose) {
-  if (!pose.keypoints) return;
-  
-  // No BlazePose v1, o índice 16 é o pulso direito
-  let h = pose.keypoints[16];
-
-  if (h && h.confidence > 0.5) {
-    // MAPEAMENTO CORRIGIDO:
-    // O vídeo está em scale(-1, 1), por isso o 0 da câmara (esquerda) 
-    // aparece na direita do ecrã.
-    let nx = map(h.x, 0, 640, 0.6, -0.6); 
-    let ny = map(h.y, 0, 480, -0.4, 0.8);
-
-    handX = nx;
-    handY = ny;
-
-    // DEBUG VISUAL: Desenha uma pequena esfera onde o código "acha" que a tua mão está
-    /*
-    push();
-    let s = min(width, height) * 0.4;
-    scale(s);
-    translate(nx, ny, 0);
-    fill(255, 255, 0);
-    noStroke();
-    sphere(0.05);
-    pop();
-    */
-
-    if (carriedTargetID === -1) {
-      // Verificar se a sequência existe antes de tentar aceder
-      if (sequence.length > 0 && playerSequence.length < sequence.length) {
-        let targetNecessarioID = sequence[playerSequence.length];
-        
-        for (let t of targets) {
-          // Só tentamos agarrar o cubo que brilha (o próximo da sequência)
-          if (t.id === targetNecessarioID) {
-            let d = dist(nx, ny, t.x, t.y);
-            if (d < 0.25) { // Aumentei ligeiramente a tolerância (raio)
-              carriedTargetID = t.id;
-              break;
-            }
-          }
-        }
-      }
-    } else {
-      // Lógica do cesto
-      let inBasketX = (nx > basket.x - basket.w/2 && nx < basket.x + basket.w/2);
-      let inBasketY = (ny > basket.y - basket.h/2 && ny < basket.y + basket.h/2);
-      
-      if (inBasketX && inBasketY) {
-        handleInput(carriedTargetID);
-        carriedTargetID = -1;
-      }
-    }
+function gameLoop() {
+  const implementation = getActiveImplementation();
+  if (implementation?.gameLoop) {
+    implementation.gameLoop(activeGameSession);
+    drawGameHud();
+    return;
   }
-}
-function handleInput(id) {
-  // 1. Validar se o cubo depositado é o correto para a posição atual da sequência
-  let expectedID = sequence[playerSequence.length];
 
-  if (id === expectedID) {
-    playerSequence.push(id); // Adiciona aos acertos do jogador nesta ronda
-    
-    // 2. Verificar se o jogador já depositou TODOS os cubos da sequência atual
-    if (playerSequence.length === sequence.length) {
-      score++; // Aumenta a pontuação apenas quando termina a sequência toda
-      state = "WAITING"; // Pequena pausa para feedback visual
-      
-      // Espera um pouco e gera o próximo nível (sequência maior)
-      setTimeout(nextLevel, 800);
-    } else {
-      // O jogador acertou, mas ainda faltam mais cubos da sequência
-      // Não fazemos nada, apenas deixamos o playerSequence crescer
-      console.log("Acertou no cubo! Faltam: " + (sequence.length - playerSequence.length));
-    }
-  } else {
-    // Errou a ordem da sequência
-    state = "GAMEOVER";
-  }
-  
-  // Reset do ID de input para permitir pegar no próximo cubo
-  lastInputID = -1;
+  drawMirrorVideo();
+  push();
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(28);
+  text("Sem implementacao para este jogo.", 0, 0);
+  pop();
+  drawGameHud();
+}
+
+function drawCongratsScreen() {
+  push();
+  translate(0, 0, 10);
+  fill(119, 242, 197);
+  textAlign(CENTER, CENTER);
+  textSize(40);
+  text("TREINO CONCLUIDO", 0, -50);
+  fill(255);
+  textSize(18);
+  text(activeGameSession?.gameName || "Jogo concluido", 0, 0);
+  text("Clica para voltar ao menu", 0, 48);
+  pop();
 }
 
 function drawGameOver() {
+  const implementation = getActiveImplementation();
+  if (state === "CONGRATS") {
+    if (implementation?.drawCongrats) {
+      implementation.drawCongrats(activeGameSession);
+      drawGameHud();
+      return;
+    }
+    drawCongratsScreen();
+    drawGameHud();
+    return;
+  }
+
+  if (implementation?.drawGameOver) {
+    implementation.drawGameOver(activeGameSession);
+    drawGameHud();
+    return;
+  }
+
   push();
-  translate(0,0,10);
+  translate(0, 0, 10);
   fill(255, 0, 0);
   textAlign(CENTER, CENTER);
-  textSize(40); text("FIM DE JOGO", 0, -50);
+  textSize(40);
+  text("FIM DE JOGO", 0, -50);
   fill(255);
-  textSize(20); text("Pontos: " + score, 0, 10);
-  text("Clica para voltar", 0, 60);
+  textSize(18);
+  text("Clica para voltar ao menu", 0, 40);
   pop();
+  drawGameHud();
 }
+
+function exitActiveGame() {
+  activeGameSession = buildFallbackGameSession();
+  state = "MENU";
+  setGameCloseButtonVisible(false);
+}
+
+applyGameSession();
+setGameCloseButtonVisible(false);
+window.drawMirrorVideo = drawMirrorVideo;
+window.drawTherapyExerciseOverlay = drawTherapyExerciseOverlay;
+window.shouldDrawGameDebug = false;
+window.shouldDrawPoseOverlay = false;
+window.exitActiveGame = exitActiveGame;
+window.registerGameImplementation = registerGameImplementation;
+window.hasGameImplementation = hasGameImplementation;
+window.startNewGame = startNewGame;

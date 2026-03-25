@@ -3,29 +3,852 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simão Ativo - Treino Cognitivo</title>
+    <title>Simao Ativo - Treino Cognitivo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.sound.min.js"></script>
     <script src="https://unpkg.com/ml5@1.2.1/dist/ml5.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { margin: 0; background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        :root {
+            --bg-night: #07111f;
+            --bg-deep: #0d2234;
+            --panel: rgba(8, 18, 31, 0.78);
+            --panel-strong: rgba(10, 24, 40, 0.94);
+            --line: rgba(130, 242, 214, 0.24);
+            --mint: #77f2c5;
+            --cyan: #73d9ff;
+            --gold: #ffd166;
+            --danger: #ff8f8f;
+            --text-soft: rgba(233, 244, 255, 0.78);
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            position: relative;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(115, 217, 255, 0.14), transparent 28%),
+                radial-gradient(circle at 82% 18%, rgba(255, 209, 102, 0.12), transparent 24%),
+                radial-gradient(circle at 50% 85%, rgba(119, 242, 197, 0.1), transparent 32%),
+                linear-gradient(180deg, var(--bg-deep), var(--bg-night));
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+            color: #eef7ff;
+        }
+
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        body::before {
+            background:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 56px 56px;
+            mask-image: radial-gradient(circle at center, black 45%, transparent 100%);
+            opacity: 0.32;
+        }
+
+        body::after {
+            background: linear-gradient(180deg, transparent 0%, rgba(3, 8, 14, 0.42) 100%);
+        }
+
+        .auth-shell {
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            box-sizing: border-box;
+            background: rgba(4, 10, 18, 0.56);
+            backdrop-filter: blur(14px);
+            overflow-y: auto;
+        }
+
+        .auth-shell.hidden,
+        .session-pill.hidden {
+            display: none;
+        }
+
+        .auth-card {
+            width: min(560px, 100%);
+            position: relative;
+            overflow: hidden;
+            padding: 24px;
+            border-radius: 28px;
+            background:
+                linear-gradient(145deg, rgba(12, 33, 52, 0.98), rgba(8, 16, 28, 0.96)),
+                var(--panel-strong);
+            border: 1px solid var(--line);
+            box-shadow:
+                0 24px 80px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            color: #fff;
+            box-sizing: border-box;
+        }
+
+        .auth-card::before,
+        .auth-card::after {
+            content: "";
+            position: absolute;
+            border-radius: 999px;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .auth-card::before {
+            top: -48px;
+            right: -28px;
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle, rgba(115, 217, 255, 0.34), transparent 68%);
+        }
+
+        .auth-card::after {
+            bottom: -54px;
+            left: -30px;
+            width: 180px;
+            height: 180px;
+            background: radial-gradient(circle, rgba(119, 242, 197, 0.22), transparent 70%);
+        }
+
+        .auth-card h2 {
+            margin: 0 0 8px;
+            font-size: 28px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            text-shadow: 0 0 18px rgba(115, 217, 255, 0.22);
+        }
+
+        .auth-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            padding: 7px 11px;
+            border-radius: 999px;
+            background: rgba(115, 217, 255, 0.09);
+            border: 1px solid rgba(115, 217, 255, 0.16);
+            color: var(--cyan);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .auth-card p {
+            margin: 0 0 12px;
+            max-width: 48ch;
+            color: var(--text-soft);
+            line-height: 1.45;
+            font-size: 14px;
+        }
+
+        .auth-steps {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            margin: 14px 0;
+        }
+
+        .auth-step {
+            display: grid;
+            grid-template-columns: 28px 1fr;
+            gap: 8px;
+            align-items: start;
+            padding: 10px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.035);
+            border: 1px solid rgba(115, 217, 255, 0.1);
+        }
+
+        .auth-step strong {
+            display: block;
+            color: #f4fbff;
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+
+        .auth-step span {
+            color: rgba(228, 240, 255, 0.72);
+            font-size: 11px;
+            line-height: 1.35;
+        }
+
+        .auth-step-badge {
+            display: grid;
+            place-items: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(119, 242, 197, 0.24), rgba(115, 217, 255, 0.2));
+            color: #fff;
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .auth-message {
+            min-height: 22px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .auth-message.error {
+            color: var(--danger);
+        }
+
+        .auth-message.success {
+            color: var(--mint);
+        }
+
+        .auth-actions {
+            display: grid;
+            gap: 10px;
+        }
+
+        .auth-actions button {
+            position: relative;
+            overflow: hidden;
+            padding: 13px 14px;
+            border: 1px solid transparent;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--mint), #48c7ff);
+            color: #062213;
+            font-size: 13px;
+            font-weight: 800;
+            cursor: pointer;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            box-shadow: 0 14px 28px rgba(72, 199, 255, 0.18);
+            transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+        }
+
+        .auth-actions button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 34px rgba(72, 199, 255, 0.22);
+        }
+
+        .auth-actions button.secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: #eff7ff;
+            border-color: rgba(115, 217, 255, 0.18);
+            box-shadow: none;
+        }
+
+        .auth-help {
+            margin-top: 10px;
+            font-size: 11px;
+            color: rgba(228, 240, 255, 0.58);
+            line-height: 1.4;
+        }
+
+        .session-pill {
+            position: fixed;
+            top: 18px;
+            left: 18px;
+            z-index: 12;
+            padding: 12px 16px;
+            max-width: min(420px, calc(100vw - 36px));
+            border-radius: 18px;
+            background: linear-gradient(135deg, rgba(8, 22, 38, 0.9), rgba(7, 32, 28, 0.84));
+            border: 1px solid rgba(119, 242, 197, 0.28);
+            color: #d7ffe9;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.3;
+            backdrop-filter: blur(14px);
+            overflow: hidden;
+            box-shadow: 0 18px 32px rgba(0, 0, 0, 0.22);
+            transition: opacity 180ms ease, transform 180ms ease;
+        }
+
+        .supervisor-launch {
+            position: fixed;
+            top: 88px;
+            left: 18px;
+            z-index: 24;
+            padding: 11px 16px;
+            border: 1px solid rgba(115, 217, 255, 0.2);
+            border-radius: 999px;
+            background: rgba(7, 23, 41, 0.9);
+            color: #f4fbff;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            cursor: pointer;
+            backdrop-filter: blur(12px);
+            transition: opacity 180ms ease, transform 180ms ease;
+        }
+
+        .game-close-button {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            z-index: 28;
+            min-width: 168px;
+            padding: 13px 18px;
+            border: 1px solid rgba(255, 232, 232, 0.92);
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(205, 36, 36, 0.96), rgba(242, 74, 74, 0.94));
+            color: #fff7f7;
+            font-size: 16px;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.24);
+            transition: transform 180ms ease, box-shadow 180ms ease;
+        }
+
+        .game-close-button.hidden {
+            display: none;
+        }
+
+        .game-close-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 36px rgba(0, 0, 0, 0.28);
+        }
+
+        .session-pill.in-game-hidden,
+        .supervisor-launch.in-game-hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-10px);
+        }
+
+        .supervisor-shell {
+            position: fixed;
+            inset: 0;
+            z-index: 26;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(2, 8, 15, 0.7);
+            backdrop-filter: blur(16px);
+        }
+
+        .supervisor-shell.hidden {
+            display: none;
+        }
+
+        .supervisor-card {
+            width: min(1120px, 100%);
+            max-height: min(760px, calc(100vh - 48px));
+            overflow: auto;
+            border-radius: 28px;
+            border: 1px solid rgba(115, 217, 255, 0.16);
+            background: linear-gradient(145deg, rgba(9, 23, 39, 0.98), rgba(7, 16, 28, 0.96));
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+        }
+
+        .supervisor-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 22px 24px 16px;
+            border-bottom: 1px solid rgba(115, 217, 255, 0.1);
+        }
+
+        .supervisor-title {
+            margin: 0;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .supervisor-copy {
+            margin: 6px 0 0;
+            color: var(--text-soft);
+            font-size: 13px;
+        }
+
+        .supervisor-close {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #f4fbff;
+            padding: 10px 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .supervisor-login,
+        .supervisor-workspace {
+            padding: 24px;
+        }
+
+        .supervisor-login.hidden,
+        .supervisor-workspace.hidden {
+            display: none;
+        }
+
+        .supervisor-login-grid {
+            display: grid;
+            grid-template-columns: minmax(280px, 360px) 1fr;
+            gap: 16px;
+        }
+
+        .supervisor-panel,
+        .player-list,
+        .assignment-panel {
+            border: 1px solid rgba(115, 217, 255, 0.1);
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.035);
+        }
+
+        .supervisor-panel {
+            padding: 18px;
+        }
+
+        .supervisor-panel h3,
+        .player-list h3,
+        .assignment-panel h3 {
+            margin: 0 0 8px;
+            font-size: 18px;
+        }
+
+        .supervisor-panel p,
+        .player-list p,
+        .assignment-panel p {
+            margin: 0 0 12px;
+            color: var(--text-soft);
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        .supervisor-login-form {
+            display: grid;
+            gap: 10px;
+        }
+
+        .supervisor-login-form input,
+        .assignment-player select,
+        .assignment-row select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 11px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(115, 217, 255, 0.14);
+            background: rgba(255, 255, 255, 0.06);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .supervisor-login-form button,
+        .assignment-actions button {
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid transparent;
+            background: linear-gradient(135deg, var(--gold), #ff9f1c);
+            color: #261400;
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        .supervisor-status {
+            min-height: 20px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .supervisor-status.error {
+            color: var(--danger);
+        }
+
+        .supervisor-status.success {
+            color: var(--mint);
+        }
+
+        .supervisor-workspace {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 18px;
+        }
+
+        .supervisor-workspace.hidden {
+            display: none;
+        }
+
+        .player-list {
+            padding: 18px;
+        }
+
+        .player-items {
+            display: grid;
+            gap: 10px;
+            max-height: 460px;
+            overflow: auto;
+        }
+
+        .player-item {
+            width: 100%;
+            text-align: left;
+            padding: 12px 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(115, 217, 255, 0.12);
+            background: rgba(7, 23, 41, 0.65);
+            color: #f4fbff;
+            cursor: pointer;
+        }
+
+        .player-item.active {
+            border-color: rgba(119, 242, 197, 0.4);
+            background: rgba(17, 51, 64, 0.78);
+        }
+
+        .player-item strong,
+        .player-item span {
+            display: block;
+        }
+
+        .player-item strong {
+            margin-bottom: 4px;
+        }
+
+        .player-item span {
+            color: var(--text-soft);
+            font-size: 12px;
+        }
+
+        .assignment-panel {
+            padding: 18px;
+        }
+
+        .assignment-player {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .assignment-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .assignment-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 12px;
+            align-items: center;
+            padding: 12px 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(115, 217, 255, 0.1);
+            background: rgba(7, 23, 41, 0.6);
+        }
+
+        .assignment-main {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .assignment-main input {
+            margin-top: 4px;
+        }
+
+        .assignment-meta strong,
+        .assignment-meta span {
+            display: block;
+        }
+
+        .assignment-meta span {
+            margin-top: 4px;
+            color: var(--text-soft);
+            font-size: 12px;
+            line-height: 1.35;
+        }
+
+        .assignment-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .assignment-actions .ghost {
+            background: rgba(255, 255, 255, 0.05);
+            color: #f4fbff;
+            border-color: rgba(115, 217, 255, 0.14);
+        }
+
+        .session-pill strong,
+        .session-pill span {
+            display: block;
+        }
+
+        .session-pill strong {
+            color: #f4fbff;
+            font-size: 13px;
+        }
+
+        .session-pill span {
+            color: rgba(215, 255, 233, 0.78);
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                align-items: stretch;
+            }
+
+            .auth-shell {
+                padding: 12px;
+                align-items: center;
+            }
+
+            .auth-card {
+                width: 100%;
+                margin-top: 0;
+                padding: 18px 16px;
+                border-radius: 22px;
+            }
+
+            .auth-card h2 {
+                font-size: 22px;
+            }
+
+            .auth-card p {
+                max-width: none;
+                font-size: 13px;
+            }
+
+            .auth-steps {
+                grid-template-columns: 1fr;
+                gap: 7px;
+                margin: 10px 0;
+            }
+
+            .auth-step {
+                grid-template-columns: 26px 1fr;
+                padding: 8px 9px;
+            }
+
+            .auth-actions {
+                gap: 8px;
+            }
+
+            .auth-actions button {
+                padding: 12px 12px;
+                font-size: 12px;
+            }
+
+            .session-pill {
+                top: 12px;
+                left: 12px;
+                right: 12px;
+                max-width: none;
+                padding: 10px 14px;
+            }
+
+            .supervisor-launch {
+                top: 72px;
+                left: 12px;
+                right: auto;
+                bottom: auto;
+            }
+
+            .game-close-button {
+                top: 12px;
+                right: 12px;
+                min-width: 150px;
+                padding: 12px 14px;
+                font-size: 14px;
+            }
+
+            .supervisor-shell {
+                padding: 12px;
+            }
+
+            .supervisor-card {
+                max-height: calc(100vh - 24px);
+            }
+
+            .supervisor-header {
+                padding: 18px 16px 14px;
+            }
+
+            .supervisor-login,
+            .supervisor-workspace {
+                padding: 16px;
+            }
+
+            .supervisor-login-grid,
+            .supervisor-workspace,
+            .assignment-player,
+            .assignment-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-height: 760px) {
+            .auth-card {
+                padding: 18px 16px;
+            }
+
+            .auth-kicker {
+                margin-bottom: 8px;
+            }
+
+            .auth-card h2 {
+                font-size: 22px;
+            }
+
+            .auth-card p {
+                margin-bottom: 8px;
+                font-size: 13px;
+            }
+
+            .auth-steps {
+                gap: 6px;
+                margin: 10px 0;
+            }
+
+            .auth-step {
+                padding: 8px 9px;
+            }
+
+            .auth-actions button {
+                padding: 11px 12px;
+            }
+        }
     </style>
 </head>
 <body>
+    <div id="session-pill" class="session-pill hidden"></div>
+    <button id="supervisor-launch" class="supervisor-launch" type="button">Supervisor</button>
+    <button id="game-close-button" class="game-close-button hidden" type="button">Fechar</button>
+
+        <div id="auth-shell" class="auth-shell hidden">
+        <div class="auth-card">
+            <div class="auth-kicker">Modo de Acesso</div>
+            <h2>Entrar no Simon Ativo</h2>
+            <p>Usa reconhecimento facial para criar conta, entrar e continuar o treino.</p>
+
+            <div class="auth-steps">
+                <div class="auth-step">
+                    <div class="auth-step-badge">1</div>
+                    <div>
+                        <strong>Criar</strong>
+                        <span>Regista o rosto.</span>
+                    </div>
+                </div>
+                <div class="auth-step">
+                    <div class="auth-step-badge">2</div>
+                    <div>
+                        <strong>Entrar</strong>
+                        <span>Volta com o rosto.</span>
+                    </div>
+                </div>
+                <div class="auth-step">
+                    <div class="auth-step-badge">3</div>
+                    <div>
+                        <strong>Associar</strong>
+                        <span>PIN do supervisor.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="auth-message" class="auth-message"></div>
+
+            <div class="auth-actions">
+                <button id="auth-open-login" type="button">Entrar com rosto</button>
+                <button id="auth-open-register" class="secondary" type="button">Criar conta com rosto</button>
+                <button id="auth-refresh-session" class="secondary" type="button">Ja fiz o login facial</button>
+            </div>
+
+            <div class="auth-help">Sem sessao? Abre o ecra facial e volta automaticamente.</div>
+        </div>
+    </div>
+
+    <div id="supervisor-shell" class="supervisor-shell hidden">
+        <div class="supervisor-card">
+            <div class="supervisor-header">
+                <div>
+                    <h2 class="supervisor-title">Painel do Supervisor</h2>
+                    <p class="supervisor-copy">Entra com PIN, escolhe um jogador e marca os jogos da proxima sessao.</p>
+                </div>
+                <button id="supervisor-close" class="supervisor-close" type="button">Fechar</button>
+            </div>
+
+            <div id="supervisor-login" class="supervisor-login">
+                <div class="supervisor-login-grid">
+                    <div class="supervisor-panel">
+                        <h3>Login do supervisor</h3>
+                        <p>Usa o PIN do supervisor para abrir o painel de atribuicoes.</p>
+                        <div class="supervisor-login-form">
+                            <input id="supervisor-pin-input" type="password" placeholder="PIN do supervisor">
+                            <button id="supervisor-login-button" type="button">Entrar no painel</button>
+                            <div id="supervisor-status" class="supervisor-status"></div>
+                        </div>
+                    </div>
+                    <div class="supervisor-panel">
+                        <h3>O que consegues fazer aqui</h3>
+                        <p>Escolher os jogos locais ativos para o jogador com sessao iniciada.</p>
+                        <p>Quando guardares, o plano fica guardado localmente e sera usado no proximo clique em jogar.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="supervisor-workspace" class="supervisor-workspace hidden">
+                <div class="player-list">
+                    <h3>Jogadores disponiveis</h3>
+                    <p id="supervisor-session-copy">Sessao ativa.</p>
+                    <div id="player-items" class="player-items"></div>
+                </div>
+
+                <div class="assignment-panel">
+                    <h3>Jogos da sessao seguinte</h3>
+                    <p>Ativa os jogos pretendidos para o jogador selecionado.</p>
+                    <div class="assignment-player">
+                        <div id="assignment-player-name" class="supervisor-status">Seleciona um jogador para editar o plano.</div>
+                    </div>
+                    <div id="assignment-grid" class="assignment-grid"></div>
+                    <div class="assignment-actions">
+                        <button id="supervisor-logout" class="ghost" type="button">Terminar sessao</button>
+                        <button id="save-assignment-button" type="button">Guardar treino</button>
+                    </div>
+                    <div id="assignment-status" class="supervisor-status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="game-config.js"></script>
+    <script src="games2/game_cintura.js"></script>
+    <script src="games2/game_membros_superiores_direita.js"></script>
+    <script src="games2/game_membros_superiores_esquerda.js"></script>
+    <script src="games2/game_ombros_geral.js"></script>
+    <script src="games2/game_ombro_dir.js"></script>
+    <script src="games2/game_ombro_esq.js"></script>
+    <script src="games2/game_sup_geral.js"></script>
+    <script src="games2/membros_inferior_direita.js"></script>
+    <script src="games2/membros_inferior_esquerda.js"></script>
+    <script src="games2/membros_inferior_juntos.js"></script>
+    <script src="games2-integration.js"></script>
+    <script src="training-plan.js"></script>
+    <script src="auth.js"></script>
+    <script src="supervisor.js"></script>
+    <script src="calibrateGame.js"></script>
     <script src="menu.js"></script>
     <script src="game.js"></script>
     <script src="sketch.js"></script>
-    <script src="calibrateGame.js"></script>
-    <script src="games/game_cintura.js"></script>
-    <script src="games/game_cabeca.js"></script>
-    <script src="games/game_joelho_dir.js"></script>
-    <script src="games/game_joelho_esq.js"></script>
-    <script src="games/game_mao_dir.js"></script>
-    <script src="games/game_mao_esq.js"></script>
-    <script src="games/game_ombro_dir.js"></script>
-    <script src="games/game_ombro_esq.js"></script>
-
-
 </body>
 </html>
