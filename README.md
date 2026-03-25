@@ -228,12 +228,7 @@ To improve the GitHub page, you may later add:
 Example section:
 
 ```md
-## Screenshots
 
-![Main Menu](docs/main-menu.png)
-![Supervisor Panel](docs/supervisor-panel.png)
-![Gameplay](docs/gameplay.png)
-```
 
 ## 📸 Visualização do Protótipo
 
