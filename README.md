@@ -228,7 +228,7 @@ To improve the GitHub page, you may later add:
 Example section:
 
 ```md
-
+```
 
 ## 📸 Visualização do Protótipo
 
