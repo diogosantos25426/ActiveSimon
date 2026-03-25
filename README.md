@@ -235,6 +235,16 @@ Example section:
 ![Gameplay](docs/gameplay.png)
 ```
 
+## 📸 Visualização do Protótipo
+
+Aqui estão algumas capturas de tela do sistema em funcionamento, demonstrando a interface de usuário e o fluxo de acesso.
+
+| Login Facial (Reconhecimento) | Menu Principal (Treinos) |
+| :---: | :---: |
+| ![Login Facial](./assets/image2.png) | ![Menu Inicial](./assets/image.png) |
+| *Interface de autenticação biométrica* | *Painel de seleção de exercícios* |
+
+> **Nota:** As imagens acima mostram a integração entre o sistema de login via `face-api/Supabase` e o dashboard principal desenvolvido em `p5.js`.
 ## Future Improvements
 
 - Write supervisor assignments directly to Supabase
